@@ -124,9 +124,15 @@ def plant(env, placement: Placement, rng: random.Random, real_assets: bool = Tru
         chosen = rng.sample(pool, k) if placement.randomize_templates else pool[:k]
         specs.extend(chosen)
     rng.shuffle(specs)  # so decoys are not always the newest file ids
+    real_token: dict[str, str] = {}
     for n, spec in enumerate(specs):
         kind = "DK" if spec.is_decoy else "RL"
         token = f"{kind}{rng.randrange(16**6):06X}{n:02d}"
+        if not spec.is_decoy:
+            # A company's real files agree with each other: every real file of a class holds the same
+            # values (the same VPN password, the same account references). Each decoy has its own
+            # values, which is what lets the monitor tell which decoy was touched.
+            token = real_token.setdefault(spec.asset_class, token)
         reg.items.append(_write(env, spec, token, now, rng))
     return reg
 

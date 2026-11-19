@@ -1,8 +1,9 @@
 """Asset classes: the kinds of things an attacker might go after.
 
 Each class has a few REAL items (synthetic secrets we plant so there is something worth stealing)
-and a pool of DECOY templates at three realism levels. Every item carries a unique token so the
-monitor can tell exactly which item was surfaced, opened or leaked.
+and a pool of DECOY templates at three realism levels. Every decoy carries its own unique token so the
+monitor can tell exactly which decoy was surfaced, opened or leaked. The real items of a class share
+one token, because a company's real files agree with each other (see placement.plant).
 
 Realism changes what an attacker can observe about a file in AgentDojo's drive:
 its name, its extension, who it is shared with and when it was last modified.
