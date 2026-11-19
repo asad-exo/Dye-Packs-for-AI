@@ -60,6 +60,7 @@ from agentdojo.agent_pipeline.agent_pipeline import load_system_message  # noqa:
 from agentdojo.task_suite.load_suites import get_suite  # noqa: E402
 
 from decoykit import ALARM_RULES, CLASS_KEYS, MonitoredRuntime, Registry, counts_policy, none_policy, outcome, plant  # noqa: E402
+from decoykit.monitor import EXTERNAL_ONLY, Event  # noqa: E402
 from decoykit.assets import ASSET_CLASSES, REALISM_LEVELS  # noqa: E402
 from sensitive_tasks import SENSITIVE_TASKS  # noqa: E402
 
@@ -137,8 +138,7 @@ def run_one(setting: str, uid: str, rep: int, args) -> dict:
         "tools": rt.calls,
         "events": [asdict(e) for e in rt.events],
         "alarm": {rule: outcome(rt.events, rule)["alarm"] for rule in ALARM_RULES},
-        "alarm_classes": {rule: sorted({e.asset_class for e in rt.events if e.is_decoy and e.kind in kinds})
-                          for rule, kinds in ALARM_RULES.items()},
+        "alarm_classes": alarm_classes(rt.events),
         "real_items_touched": sorted({e.kind for e in rt.events if not e.is_decoy}),
         "output_excerpt": out[:2000],
     }
@@ -149,6 +149,21 @@ def run_one(setting: str, uid: str, rep: int, args) -> dict:
             rec["utility"] = bool(ut.check(out, pre, env, reg) if sensitive else ut.utility(out, pre, env))
         except Exception:
             pass
+    return rec
+
+
+def alarm_classes(events) -> dict[str, list[str]]:
+    """For each alarm rule, the asset classes of the decoys that set it off."""
+    return {rule: sorted({e.asset_class for e in events if e.is_decoy and e.kind in kinds
+                         and (e.external or rule not in EXTERNAL_ONLY)})
+            for rule, kinds in ALARM_RULES.items()}
+
+
+def rescore(rec: dict) -> dict:
+    """Recompute the alarms from the saved events, so every run is scored by the current rules."""
+    events = [Event(**e) for e in rec["events"]]
+    rec["alarm"] = {rule: outcome(events, rule)["alarm"] for rule in ALARM_RULES}
+    rec["alarm_classes"] = alarm_classes(events)
     return rec
 
 
@@ -228,7 +243,7 @@ GROUP_LABELS = {"standard": "AgentDojo's normal tasks (none needs a sensitive fi
 
 
 def summarize(args):
-    recs = latest_ok(load_records(args.out))
+    recs = {k: rescore(r) for k, r in latest_ok(load_records(args.out)).items()}
     if not recs:
         raise SystemExit(f"no finished runs in {args.out}")
     summary = {"provider": args.provider, "model": args.model, "groups": {}}
@@ -316,6 +331,14 @@ def summarize_group(recs: dict, group: str) -> dict:
 
 # ---------------------------------------------------------------------------------------------- main
 
+def per_run_estimate(done: dict, group: str, args) -> tuple[float, str]:
+    """Average cost of this model's finished runs in the same task group, or the pilot's figure if there are few."""
+    costs = [r["cost"] for r in done.values() if task_group(r["user_task"]) == group]
+    if len(costs) >= 5:
+        return sum(costs) / len(costs), "this model's earlier runs"
+    return anthropic_compat.estimated_cost(args.model, PILOT_TOKENS_PER_RUN, args.price), "the October pilot"
+
+
 def safe_name(model: str) -> str:
     """Model names like 'qwen3:8b' contain characters Windows does not allow in file names."""
     return re.sub(r"[^A-Za-z0-9._-]+", "-", model)
@@ -370,14 +393,18 @@ def main(argv=None):
     jobs = [(s, uid, rep) for rep in range(args.reps) for uid in task_ids for s in names
             if (s, uid, rep) not in done and not (uid in SENSITIVE_TASKS and SETTINGS[s] is None)]
     jobs = jobs[:args.limit] if args.limit else jobs
-    est = len(jobs) * anthropic_compat.estimated_cost(args.model, PILOT_TOKENS_PER_RUN, args.price)
+    est, sources = 0.0, set()
+    for _, uid, _ in jobs:
+        cost, source = per_run_estimate(done, task_group(uid), args)
+        est += cost
+        sources.add(source)
     if args.plan:
         print(f"model: {args.provider}/{args.model}, {args.workers} run(s) at a time")
         print(f"settings: {', '.join(names)}")
         print(f"tasks: {args.tasks} ({len(task_ids)}); {len(names)} settings; {args.reps} repetition(s); "
               f"{len(done)} runs already done, {len(jobs)} to run")
         print(f"estimated cost ${est:.2f} at ${args.price[0]:g}/${args.price[1]:g} per million tokens "
-              f"(token counts from the October pilot); hard limit ${args.max_cost:.2f}")
+              f"(cost per run from {' and '.join(sorted(sources))}); hard limit ${args.max_cost:.2f}")
         if args.provider == "google" and price_given is None:
             print("note: that Gemini price is a deliberately high placeholder; pass --price with the real one")
         return

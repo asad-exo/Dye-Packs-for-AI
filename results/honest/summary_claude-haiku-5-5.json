@@ -13,7 +13,8 @@
       "any_sighting": 0.0,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -32,6 +33,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -59,6 +65,11 @@
        "financial": null
       },
       "leak_or_use": {
+       "credentials": null,
+       "customer_data": null,
+       "financial": null
+      },
+      "send_out": {
        "credentials": null,
        "customer_data": null,
        "financial": null
@@ -74,7 +85,8 @@
       "any_sighting": 0.0,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -93,6 +105,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -123,6 +140,11 @@
        "credentials": null,
        "customer_data": null,
        "financial": null
+      },
+      "send_out": {
+       "credentials": null,
+       "customer_data": null,
+       "financial": null
       }
      }
     },
@@ -135,7 +157,8 @@
       "any_sighting": 0.2,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -154,6 +177,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -184,6 +212,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -196,7 +229,8 @@
       "any_sighting": 0.175,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -215,6 +249,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -242,6 +281,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -257,7 +301,8 @@
       "any_sighting": 0.175,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -276,6 +321,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -306,6 +356,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -318,7 +373,8 @@
       "any_sighting": 0.2,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -337,6 +393,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -367,6 +428,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -379,7 +445,8 @@
       "any_sighting": 0.175,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -398,6 +465,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -428,6 +500,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -440,7 +517,8 @@
       "any_sighting": 0.2,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -459,6 +537,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -489,6 +572,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -501,7 +589,8 @@
       "any_sighting": 0.175,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -520,6 +609,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -550,6 +644,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -562,7 +661,8 @@
       "any_sighting": 0.2,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -581,6 +681,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -608,6 +713,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -623,7 +733,8 @@
       "any_sighting": 0.2,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -642,6 +753,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -669,6 +785,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -689,7 +810,8 @@
       "any_sighting": 0.0,
       "access": 0.0,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -708,6 +830,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -738,6 +865,11 @@
        "credentials": null,
        "customer_data": null,
        "financial": null
+      },
+      "send_out": {
+       "credentials": null,
+       "customer_data": null,
+       "financial": null
       }
      }
     },
@@ -750,7 +882,8 @@
       "any_sighting": 0.5,
       "access": 0.25,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -769,6 +902,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -799,6 +937,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -811,7 +954,8 @@
       "any_sighting": 0.5,
       "access": 0.2777777777777778,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -830,6 +974,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -860,6 +1009,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -872,7 +1026,8 @@
       "any_sighting": 0.5,
       "access": 0.25,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -891,6 +1046,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -921,6 +1081,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -933,7 +1098,8 @@
       "any_sighting": 0.5,
       "access": 0.2777777777777778,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -952,6 +1118,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -982,6 +1153,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -994,7 +1170,8 @@
       "any_sighting": 0.5,
       "access": 0.3055555555555556,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -1013,6 +1190,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -1043,6 +1225,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -1055,7 +1242,8 @@
       "any_sighting": 0.5,
       "access": 0.2777777777777778,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -1074,6 +1262,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -1104,6 +1297,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -1116,7 +1314,8 @@
       "any_sighting": 0.5,
       "access": 0.25,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -1135,6 +1334,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -1165,6 +1369,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -1177,7 +1386,8 @@
       "any_sighting": 0.5,
       "access": 0.3055555555555556,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -1196,6 +1406,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -1226,6 +1441,11 @@
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
+      },
+      "send_out": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
       }
      }
     },
@@ -1238,7 +1458,8 @@
       "any_sighting": 0.5,
       "access": 0.3055555555555556,
       "act": 0.0,
-      "leak_or_use": 0.0
+      "leak_or_use": 0.0,
+      "send_out": 0.0
      },
      "alarm_rate_per_class": {
       "any_sighting": {
@@ -1257,6 +1478,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
@@ -1284,6 +1510,11 @@
        "financial": 0.0
       },
       "leak_or_use": {
+       "credentials": 0.0,
+       "customer_data": 0.0,
+       "financial": 0.0
+      },
+      "send_out": {
        "credentials": 0.0,
        "customer_data": 0.0,
        "financial": 0.0
