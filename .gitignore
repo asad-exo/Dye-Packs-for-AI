@@ -1,0 +1,19 @@
+# Secrets: never commit these
+.env
+*.key
+secrets/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Scratch output from runs (finished results go in results/)
+pilot_run.json
+*.log
+
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/
