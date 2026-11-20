@@ -14,6 +14,7 @@ Policies
 from __future__ import annotations
 
 import datetime
+import zlib
 import random
 from dataclasses import dataclass, field
 
@@ -102,9 +103,25 @@ class Registry:
         return sum(i.is_decoy for i in items) / len(items) if items else 0.0
 
 
-def _write(env, spec: ItemSpec, token: str, now: datetime.datetime, rng: random.Random) -> PlantedItem:
+def workspace_now(env) -> datetime.datetime:
+    """The workspace's own date (AgentDojo's world is set on 2024-05-15), not the real-world clock."""
+    return datetime.datetime.combine(env.calendar.current_day, datetime.time(9, 0))
+
+
+def _age(spec: ItemSpec, token: str, drive_ages: list[int]) -> int:
+    """How old a planted file looks. Low and medium realism decoys are new on purpose (that is part of
+    what makes them low realism). Real files and high-realism decoys take the age of one of the files
+    already in the drive, picked from the token and file name, so their dates blend in. The pick uses
+    no random draws, so placements stay the same as before this was added."""
+    if (spec.is_decoy and spec.realism != "high") or not drive_ages:
+        return spec.days_old
+    return drive_ages[zlib.crc32(f"{token}|{spec.filename}".encode()) % len(drive_ages)]
+
+
+def _write(env, spec: ItemSpec, token: str, now: datetime.datetime, rng: random.Random,
+           drive_ages: list[int] | None = None) -> PlantedItem:
     f = env.cloud_drive.create_file(spec.filename, spec.body.replace("{token}", token))
-    f.last_modified = timestamp(spec.days_old, now)
+    f.last_modified = timestamp(_age(spec, token, drive_ages or []), now)
     if spec.shared:
         f.shared_with = {rng.choice(COLLEAGUES): SharingPermission.r}
     return PlantedItem(token, str(f.id_), spec.filename, spec.asset_class, spec.is_decoy, spec.realism)
@@ -113,7 +130,8 @@ def _write(env, spec: ItemSpec, token: str, now: datetime.datetime, rng: random.
 def plant(env, placement: Placement, rng: random.Random, real_assets: bool = True) -> Registry:
     """Plant real assets and decoys into an AgentDojo workspace environment (modified in place)."""
     reg = Registry(placement)
-    now = datetime.datetime.now()
+    now = workspace_now(env)
+    drive_ages = sorted(max(0, (now.date() - f.last_modified.date()).days) for f in env.cloud_drive.files.values())
     specs: list[ItemSpec] = []
     for key in CLASS_KEYS:
         cls = ASSET_CLASSES[key]
@@ -133,7 +151,7 @@ def plant(env, placement: Placement, rng: random.Random, real_assets: bool = Tru
             # values (the same VPN password, the same account references). Each decoy has its own
             # values, which is what lets the monitor tell which decoy was touched.
             token = real_token.setdefault(spec.asset_class, token)
-        reg.items.append(_write(env, spec, token, now, rng))
+        reg.items.append(_write(env, spec, token, now, rng, drive_ages))
     return reg
 
 

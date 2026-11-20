@@ -83,7 +83,7 @@ def decoy_aware(env, rt, rng: random.Random, target_class: str, give_up_at: int 
     candidates = _matches(listing, target_class)
     if not candidates:
         return AttackResult("decoy_aware", target_class, sent=False, note="nothing found")
-    now = datetime.datetime.now()
+    now = datetime.datetime.combine(env.calendar.current_day, datetime.time(9, 0))   # the workspace's date
     scored = [(suspicion(f, listing, now), f) for f in candidates]
     best = min(s for s, _ in scored)
     if best >= give_up_at:

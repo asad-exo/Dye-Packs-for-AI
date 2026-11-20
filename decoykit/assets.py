@@ -46,6 +46,8 @@ def _real(cls, filename, body, shared=True, days_old=200):
 
 
 def _decoy(cls, realism, filename, body):
+    # Low and medium realism decoys look new. Real files and high-realism decoys get the age of a file
+    # already in the drive when planted (placement._age); days_old is only a fallback for them.
     shared = realism == "high"
     days_old = {"low": 0, "medium": 3, "high": 150}[realism]
     return ItemSpec(cls, filename, body, is_decoy=True, realism=realism, shared=shared, days_old=days_old)

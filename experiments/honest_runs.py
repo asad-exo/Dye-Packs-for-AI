@@ -183,7 +183,8 @@ def latest_ok(records: list[dict]) -> dict[tuple, dict]:
     return best
 
 
-def run_all(args, jobs: list[tuple]):
+def run_all(args, jobs: list[tuple], run_fn=None):
+    """Run jobs in parallel; `run_fn(*job, args)` makes one record (default: an honest run)."""
     prior = sum(r.get("cost", 0) for r in load_records(args.out))
     start = dict(anthropic_compat.USAGE)
     lock, stop = threading.Lock(), threading.Event()
@@ -202,7 +203,7 @@ def run_all(args, jobs: list[tuple]):
             reason["text"] = "the cost limit was reached; raise --max-cost and run again to continue"
             stop.set()
             return
-        rec = run_one(*job, args)
+        rec = (run_fn or run_one)(*job, args)
         with lock:
             with open(args.out, "a", encoding="utf-8") as f:
                 f.write(json.dumps(rec) + "\n")
@@ -229,7 +230,7 @@ def run_all(args, jobs: list[tuple]):
     took = time.time() - started
     if counts["done"]:
         print(f"took {took / 60:.1f} min, {took / counts['done']:.0f} s per run "
-              f"(a full pass of 440 runs would take about {took / counts['done'] * 440 / 3600:.1f} h at this speed)")
+              f"(at this speed, 100 runs take about {took / counts['done'] * 100 / 3600:.1f} h)")
     print(f"done: {counts['done']} runs ({counts['errors']} could not reach the model; those are tried again on "
           f"the next start), ${session_cost():.2f} this session, ${prior + session_cost():.2f} in total")
     if stop.is_set():

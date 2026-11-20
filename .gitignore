@@ -17,3 +17,6 @@ pilot_run.json
 .DS_Store
 .vscode/
 .idea/
+
+# Commit message shipped with each update zip
+COMMIT_MSG.txt

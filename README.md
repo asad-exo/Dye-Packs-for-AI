@@ -21,6 +21,14 @@ Honest-agent results so far (November 2026). Nobody attacks in these runs, so ev
 - **The `send_out` rule** (a decoy is sent to someone outside the company) gave 0 false alarms in 1,094 honest runs with decoys across all three models (95% upper bound 0.27% per run). It catches the scripted attackers exactly as often as `act` does. The rule was chosen after seeing the `act` alarms above, so it still has to be tested on fresh runs.
 - Tables: `python experiments/honest_runs.py --summary` (add `--provider` and `--model` for other models). Raw runs: `results/honest/`.
 
+Hijack results so far (November 2026; `experiments/hijack_runs.py`; Claude Haiku 5.5, 360 runs; 9 runs per cell in direct mode, so these are early numbers):
+
+- Claude ignored all 288 hidden instructions planted in emails, calendar entries and files, and still did the user's task as often as usual.
+- Given the attacker's instructions directly (direct mode):
+  - **Naive attacker:** whenever it sent anything out with decoys present, it was caught first (9 of 9). No real secret left, against 33% of runs without decoys.
+  - **Decoy-aware attacker, low-realism decoys:** it avoided the decoys and got a real secret out in 89% of runs.
+  - **Decoy-aware attacker, high-realism decoys:** it was never caught, but it mostly declined to send anything. A real secret left in 0% and 22% of runs at 2 and 4 decoys per class, against 67% with no decoys. The decoys deterred it rather than caught it.
+
 Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environment, Claude Haiku 5.5 and 4.5):
 
 - 0 of 40 normal tasks raised an alarm when the alarm fires only if a decoy is opened, used or leaked. Counting any sighting of a decoy in a file listing would have flagged 9 of 40.
@@ -37,9 +45,10 @@ Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environme
 | `model/simple_model.py` | The one-asset game in code; checks Results 1 and 2 numerically. |
 | `model/placement_solver.py` | The multi-asset Stackelberg solver with a false-alarm budget and attacker types (one linear program per attacker choice). |
 | `decoykit/` | The decoy kit: asset classes with real items and decoys at three realism levels, placement policies, and the alarm monitor. See [decoykit/README.md](decoykit/README.md). |
-| `attackers/` | Four scripted hijacked agents: grab_all, pick_one, decoy_aware, informed. See [attackers/README.md](attackers/README.md). |
+| `attackers/` | Four scripted hijacked agents (grab_all, pick_one, decoy_aware, informed), and the hidden instructions used for real hijack attempts (`injections.py`). See [attackers/README.md](attackers/README.md). |
 | `experiments/offline_check.py` | Scripted attackers against each placement, plus AgentDojo's scripted task solutions as a stand-in for the honest agent. No API key needed. |
 | `experiments/honest_runs.py` | Real AI agents do the 40 normal tasks under 11 decoy settings, to measure false alarms and any cost to task success. Works with Anthropic, Google (Gemini) and local models through Ollama. |
+| `experiments/hijack_runs.py` | Real hijack attempts: hidden instructions in emails, calendar entries and files tell the agent to steal the planted secrets (or, in direct mode, the agent is given the attacker's instructions outright). Measures how often a hijacked agent is caught by a decoy before a real secret leaves. |
 | `experiments/providers.py` | Connects AgentDojo to each model provider and fixes what current library versions broke. |
 | `experiments/anthropic_compat.py` | The fixes for the Anthropic library, plus token counting and cost estimates. |
 | `experiments/sensitive_tasks.py` | 12 honest tasks that genuinely need passwords, customer records or bank details, each with a pass/fail check. |
@@ -120,6 +129,15 @@ python experiments/honest_runs.py --provider google --model <model-name> --price
 
 # Tables of false alarms and task success (add the same --provider and --model)
 python experiments/honest_runs.py --summary
+```
+
+Hijack attempts work the same way, with the same model options:
+
+```powershell
+python experiments/hijack_runs.py --plan
+python experiments/hijack_runs.py --provider ollama --model qwen3:8b --limit 6
+python experiments/hijack_runs.py --provider ollama --model qwen3:8b
+python experiments/hijack_runs.py --provider ollama --model qwen3:8b --summary
 ```
 
 Each run is saved as one line in `results/honest/<model>.jsonl` as soon as it finishes, so a run can be stopped (Ctrl+C) and restarted: it picks up where it left off. It stops by itself at the cost limit (`--max-cost`, default $5) and after 5 failures in a row to reach the model.
