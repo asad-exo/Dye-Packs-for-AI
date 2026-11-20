@@ -21,13 +21,14 @@ Honest-agent results so far (November 2026). Nobody attacks in these runs, so ev
 - **The `send_out` rule** (a decoy is sent to someone outside the company) gave 0 false alarms in 1,094 honest runs with decoys across all three models (95% upper bound 0.27% per run). It catches the scripted attackers exactly as often as `act` does. The rule was chosen after seeing the `act` alarms above, so it still has to be tested on fresh runs.
 - Tables: `python experiments/honest_runs.py --summary` (add `--provider` and `--model` for other models). Raw runs: `results/honest/`.
 
-Hijack results so far (November 2026; `experiments/hijack_runs.py`; Claude Haiku 5.5, 360 runs; 9 runs per cell in direct mode, so these are early numbers):
+Hijack results so far (November 2026; `experiments/hijack_runs.py`; Claude Haiku 5.5 and Qwen3 8B, 360 runs each; direct-mode cells have 9 runs, so these are early numbers):
 
-- Claude ignored all 288 hidden instructions planted in emails, calendar entries and files, and still did the user's task as often as usual.
-- Given the attacker's instructions directly (direct mode):
-  - **Naive attacker:** whenever it sent anything out with decoys present, it was caught first (9 of 9). No real secret left, against 33% of runs without decoys.
-  - **Decoy-aware attacker, low-realism decoys:** it avoided the decoys and got a real secret out in 89% of runs.
-  - **Decoy-aware attacker, high-realism decoys:** it was never caught, but it mostly declined to send anything. A real secret left in 0% and 22% of runs at 2 and 4 decoys per class, against 67% with no decoys. The decoys deterred it rather than caught it.
+- **Hidden instructions:** neither model followed any of the 288 planted in emails, calendar entries and files, and both still did the user's task as usual.
+- **Direct mode** (the attacker's instructions given outright): Qwen3 nearly always complied (89-100% of runs); Claude complied in 0-89%, depending on the setting.
+- **Decoys work like an alarm, not a lock:**
+  - **Naive hijacked agents** usually sent everything they found in one message. The alarm went off in every such case, but the real secrets in that message still left (Qwen3: 21 of 27 runs with decoys; Claude: all 9 that sent anything). That is detection, not prevention.
+  - **Decoy-aware Qwen3** sent a single file. In 12 of 27 runs it picked a decoy (caught, nothing real left); in 13 it picked the real file (missed).
+  - **Decoy-aware Claude** was never caught, but with high-realism decoys it mostly sent nothing. A real secret left in 0% and 22% of runs at 2 and 4 decoys per class, against 67% with no decoys.
 
 Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environment, Claude Haiku 5.5 and 4.5):
 
