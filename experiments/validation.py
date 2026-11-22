@@ -126,7 +126,7 @@ def compare():
                 p = sum(pred["predicted_detected"]["per_type"][r["goal_class"]][thief] for r in sel) / len(sel)
             else:
                 p = pred["predicted_detected"]["per_type"][c][thief]
-            inside = lo <= p <= hi
+            inside = lo - 1e-9 <= p <= hi + 1e-9        # tolerance: a share of 100% must count as inside [x, 100%]
             name = "all types" if c is None else LABEL[c]
             print(f"  {'decoy-aware' if thief == 'aware' else 'naive':11s} {name:16s} {k:3d} of {len(sel):3d}  "
                   f"{k / len(sel):4.0%} [{lo:4.0%}-{hi:4.0%}]  predicted {p:4.0%}  {'inside' if inside else 'OUTSIDE'}")

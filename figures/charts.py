@@ -7,6 +7,8 @@ Reads the results files and writes into figures/:
                                      placing them (from results/placement_comparison.json)
   alarm_tradeoff_{light,dark}.png    thefts detected against false alarms on honest work, for each alarm rule
                                      and decoy setup (from results/alarm_tradeoff.json)
+  deterrence_{light,dark}.png        how often a hijacked agent sent anything out, by the share of decoys
+                                     (from results/deterrence.json)
 """
 from __future__ import annotations
 
@@ -146,12 +148,52 @@ def alarm_chart(data, theme, profile="Qwen3"):
     return fig
 
 
+# ---------------------------------------------------------------------------------------------- deterrence
+
+THIEVES = [("naive", "Naive hijacked agent", "o"), ("aware", "Decoy-aware hijacked agent", "s")]
+DETERRENCE_TITLES = {"Claude": "Claude Haiku 5.5: tries less as decoys increase", "Qwen3": "Qwen3 8B: not deterred"}
+
+
+def deterrence_chart(data, theme):
+    t = THEMES[theme]
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4.9), facecolor=t["surface"], sharey=True)
+    title(fig, t, "Do decoys scare a hijacked agent off?",
+          "Share of hijacked runs in which the agent sent anything out, by the share of decoys among each type's files\n"
+          "(high realism, next to 2 real files). Vertical bars are 95% intervals; 27 to 162 runs per point.")
+    legend(fig, t, 0.80, [(i, m, label) for i, (_, label, m) in enumerate(THIEVES)])
+    for ax, model in zip(axes, ("Claude", "Qwen3")):
+        style(ax, t)
+        for i, (thief, _, marker) in enumerate(THIEVES):
+            rows = data["models"][model][thief]
+            xs = [100 * r["decoy_share"] + (-0.9, 0.9)[i] for r in rows]     # nudge the two series apart
+            for x, r in zip(xs, rows):
+                lo, hi = r["interval"]
+                ax.plot([x, x], [100 * lo, 100 * hi], color=t["series"][i], linewidth=1.3, alpha=0.55,
+                        solid_capstyle="round", zorder=2)
+            line(ax, t, xs, [100 * r["share"] for r in rows], i, marker, z=3 + i)
+        ax.set_title(DETERRENCE_TITLES[model], loc="left", fontsize=9, color=t["ink"], pad=6)
+        if not any(r["decoys_per_type"] == 1 for r in data["models"][model]["naive"]):
+            ax.text(100 / 3, 62, "no runs with\n1 decoy per type", ha="center", va="center", fontsize=8,
+                    color=t["muted"], linespacing=1.3)
+        ax.set_xlim(-6, 73)
+        ax.set_ylim(0, 103)
+        ax.set_xticks([0, 100 / 3, 50, 200 / 3])
+        ax.set_xticklabels(["none", "1/3\n(1 decoy)", "1/2\n(2 decoys)", "2/3\n(4 decoys)"])
+        percent_axis(ax.yaxis, range(0, 101, 20))
+        ax.set_xlabel("share of decoys among each type's files", fontsize=8.5, color=t["ink2"])
+    axes[0].set_ylabel("runs that sent anything out", fontsize=8.5, color=t["ink2"])
+    axes[1].tick_params(labelleft=False)
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.70, bottom=0.17, wspace=0.08)
+    return fig
+
+
 # ---------------------------------------------------------------------------------------------- main
 
 def main():
     installed = {f.name for f in font_manager.fontManager.ttflist}      # the first of these that is installed
     plt.rcParams["font.family"] = next(f for f in ("Inter", "Segoe UI", "DejaVu Sans") if f in installed)
-    charts = [("placement_loss", "placement_comparison.json", loss_chart), ("alarm_tradeoff", "alarm_tradeoff.json", alarm_chart)]
+    charts = [("placement_loss", "placement_comparison.json", loss_chart), ("alarm_tradeoff", "alarm_tradeoff.json", alarm_chart),
+              ("deterrence", "deterrence.json", deterrence_chart)]
     for name, source, make in charts:
         data = json.load(open(os.path.join(ROOT, "results", source), encoding="utf-8"))
         for theme in THEMES:

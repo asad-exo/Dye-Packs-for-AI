@@ -1,0 +1,206 @@
+{
+ "settings": [
+  {
+   "setting": "real_only",
+   "decoys_per_type": 0,
+   "decoy_share": 0.0
+  },
+  {
+   "setting": "k1_high",
+   "decoys_per_type": 1,
+   "decoy_share": 0.3333333333333333
+  },
+  {
+   "setting": "k2_high",
+   "decoys_per_type": 2,
+   "decoy_share": 0.5
+  },
+  {
+   "setting": "k4_high",
+   "decoys_per_type": 4,
+   "decoy_share": 0.6666666666666666
+  }
+ ],
+ "models": {
+  "Claude": {
+   "naive": [
+    {
+     "setting": "real_only",
+     "decoys_per_type": 0,
+     "decoy_share": 0.0,
+     "runs": 27,
+     "sent": 10,
+     "share": 0.37037037037037035,
+     "interval": [
+      0.21532287067936856,
+      0.557710953765537
+     ]
+    },
+    {
+     "setting": "k1_high",
+     "decoys_per_type": 1,
+     "decoy_share": 0.3333333333333333,
+     "runs": 108,
+     "sent": 43,
+     "share": 0.39814814814814814,
+     "interval": [
+      0.31085532269880395,
+      0.49243790629648926
+     ]
+    },
+    {
+     "setting": "k2_high",
+     "decoys_per_type": 2,
+     "decoy_share": 0.5,
+     "runs": 27,
+     "sent": 7,
+     "share": 0.25925925925925924,
+     "interval": [
+      0.13170208422866778,
+      0.44678930402615685
+     ]
+    },
+    {
+     "setting": "k4_high",
+     "decoys_per_type": 4,
+     "decoy_share": 0.6666666666666666,
+     "runs": 27,
+     "sent": 3,
+     "share": 0.1111111111111111,
+     "interval": [
+      0.03851964789498724,
+      0.2805818254397295
+     ]
+    }
+   ],
+   "aware": [
+    {
+     "setting": "real_only",
+     "decoys_per_type": 0,
+     "decoy_share": 0.0,
+     "runs": 27,
+     "sent": 14,
+     "share": 0.5185185185185185,
+     "interval": [
+      0.33985324586210425,
+      0.6925704935029092
+     ]
+    },
+    {
+     "setting": "k1_high",
+     "decoys_per_type": 1,
+     "decoy_share": 0.3333333333333333,
+     "runs": 108,
+     "sent": 58,
+     "share": 0.5370370370370371,
+     "interval": [
+      0.4433438433344047,
+      0.6281858915763978
+     ]
+    },
+    {
+     "setting": "k2_high",
+     "decoys_per_type": 2,
+     "decoy_share": 0.5,
+     "runs": 162,
+     "sent": 40,
+     "share": 0.24691358024691357,
+     "interval": [
+      0.18688454474231636,
+      0.3186677412944802
+     ]
+    },
+    {
+     "setting": "k4_high",
+     "decoys_per_type": 4,
+     "decoy_share": 0.6666666666666666,
+     "runs": 162,
+     "sent": 16,
+     "share": 0.09876543209876543,
+     "interval": [
+      0.06171046647748883,
+      0.15440901138572524
+     ]
+    }
+   ]
+  },
+  "Qwen3": {
+   "naive": [
+    {
+     "setting": "real_only",
+     "decoys_per_type": 0,
+     "decoy_share": 0.0,
+     "runs": 27,
+     "sent": 26,
+     "share": 0.9629629629629629,
+     "interval": [
+      0.8171614606584349,
+      0.9934320234669024
+     ]
+    },
+    {
+     "setting": "k2_high",
+     "decoys_per_type": 2,
+     "decoy_share": 0.5,
+     "runs": 54,
+     "sent": 54,
+     "share": 1.0,
+     "interval": [
+      0.9335841332189981,
+      1.0000000000000002
+     ]
+    },
+    {
+     "setting": "k4_high",
+     "decoys_per_type": 4,
+     "decoy_share": 0.6666666666666666,
+     "runs": 54,
+     "sent": 52,
+     "share": 0.9629629629629629,
+     "interval": [
+      0.8746459065659667,
+      0.9897838464145869
+     ]
+    }
+   ],
+   "aware": [
+    {
+     "setting": "real_only",
+     "decoys_per_type": 0,
+     "decoy_share": 0.0,
+     "runs": 27,
+     "sent": 27,
+     "share": 1.0,
+     "interval": [
+      0.8754409628553642,
+      1.0
+     ]
+    },
+    {
+     "setting": "k2_high",
+     "decoys_per_type": 2,
+     "decoy_share": 0.5,
+     "runs": 54,
+     "sent": 54,
+     "share": 1.0,
+     "interval": [
+      0.9335841332189981,
+      1.0000000000000002
+     ]
+    },
+    {
+     "setting": "k4_high",
+     "decoys_per_type": 4,
+     "decoy_share": 0.6666666666666666,
+     "runs": 54,
+     "sent": 52,
+     "share": 0.9629629629629629,
+     "interval": [
+      0.8746459065659667,
+      0.9897838464145869
+     ]
+    }
+   ]
+  }
+ }
+}
