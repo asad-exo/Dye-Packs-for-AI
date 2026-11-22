@@ -6,9 +6,32 @@ Course project for ECE-GY 6263 Game Theory (NYU Tandon, Fall 2026) by Asad Shaha
 
 **The idea:** plant decoys (fake files, fake tools, fake credentials) in an AI agent's workspace. The company's own agent never needs them, so an agent that opens, uses or leaks one has probably been hijacked by hidden instructions. A Stackelberg security game decides how many decoys to plant, how realistic to make them, and where.
 
+## How it works
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/hijack_dark.png">
+  <img alt="An attacker plants an email with hidden instructions; the company's AI agent reads it while summarizing the inbox, searches the drive and emails the files to the attacker" src="figures/hijack_light.png" width="100%">
+</picture>
+
+An attacker hides instructions in something the agent will read: an email, a calendar invite or a shared file. When an employee asks the agent for something ordinary, the agent reads the hidden text, follows it, and sends company secrets outside. In our runs none of the three models tested followed such hidden instructions (0 of 648), so we also give the agent the attacker's instructions outright ("direct mode") to study what a hijacked agent does.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/decoys_dark.png">
+  <img alt="An honest agent opens the file it was asked for: no alarm. A naive hijacked agent sends every file: alarm, but the real files leave too. A decoy-aware hijacked agent sends one file: caught if it is a decoy, missed if it is real" src="figures/decoys_light.png" width="100%">
+</picture>
+
+Decoys sit next to the real files and look the same to the agent. Each holds its own fake value, so the monitor knows when one is touched. A naive hijacked agent sends everything and sets off the alarm, but the real files leave too. A decoy-aware one sends a single file and is caught only when that file is a decoy. Honest work pays a price when a request only describes a file: the search can turn up decoys and confuse the agent.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/game_dark.png">
+  <img alt="The company commits to a decoy placement; the thief learns it and steals where stealing pays most. With 3 decoys all on passwords the thief takes the bank details; with one decoy in each type nothing pays and the thief stays away" src="figures/game_light.png" width="100%">
+</picture>
+
+Where to put the decoys is a Stackelberg game: the company commits to a placement, and the thief, who learns it, steals where stealing pays most or stays away. Putting every decoy on the most valuable files only sends the thief elsewhere; spreading the same decoys can make every target unprofitable. [model/MODEL.md](model/MODEL.md) has the full model, with thieves who grab everything, thieves who spot some decoys, and the cost to honest work.
+
 ## Status
 
-The decoy kit, the scripted attackers and the game model are written and checked. The experiments have run: false alarms from honest agents, real hijack attempts, and the comparison of decoy placements and alarm rules (results below). Next: figures that explain the project, the presentation and the report. The model is explained in [model/MODEL.md](model/MODEL.md).
+The decoy kit, the scripted attackers and the game model are written and checked. The experiments have run: false alarms from honest agents, real hijack attempts, and the comparison of decoy placements and alarm rules (results below). Next: the presentation and the report. The model is explained in [model/MODEL.md](model/MODEL.md).
 
 Honest-agent results so far (November 2026). Nobody attacks in these runs, so every alarm is a false alarm.
 
@@ -114,7 +137,7 @@ Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environme
 | `experiments/pilot/` | The October feasibility pilot: `run_pilot.py` (real AI agents; needs a key), `scripted_decoy_test.py`, `summarize_pilot.py`. |
 | `results/` | `honest/` and `hijack/`: one line per agent run, per model. `placement_comparison.json` and `alarm_tradeoff.json`: the two analyses above. `pilot/`: the October pilot. `offline_check.json`: the scripted attackers. |
 | `model/simple_model_check.py` | Early sketch from the proposal stage, replaced by the two model files above. |
-| `figures/` | The charts in this README, in light and dark versions; `charts.py` redraws them from `results/`. |
+| `figures/` | The diagrams and charts in this README, in light and dark versions: `diagrams.py` draws the diagrams, `charts.py` redraws the charts from `results/`. |
 | `paper/` | The report; empty for now. |
 
 ## Setup
@@ -175,6 +198,7 @@ python experiments/pilot/summarize_pilot.py  # the pilot numbers above
 python experiments/placement_comparison.py   # placement strategies scored with the measured numbers (a few seconds)
 python experiments/alarm_tradeoff.py         # false alarms against thefts detected, for each alarm rule
 python figures/charts.py                     # redraws the charts from those two results
+python figures/diagrams.py                   # redraws the diagrams (see figures/README.md)
 ```
 
 Honest-agent runs. Start with `--plan` (spends nothing) and `--limit 5` (a 5-run test) for any new model.
@@ -221,4 +245,3 @@ The full default run is 73 agent runs and cost about $0.20 on Claude Haiku 5.5 i
 
 - All data in AgentDojo is synthetic. The "attacker" address and the decoy contents are made up.
 - AgentDojo 0.1.35 does not work with current versions of the Anthropic library as shipped. `experiments/anthropic_compat.py` and `experiments/providers.py` fix the problems found so far, for each provider; every script that runs a model imports them first.
-- Figures explaining the project (how hijacking works, how decoys catch it, the game) will be added to this README.
