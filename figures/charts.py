@@ -9,6 +9,10 @@ Reads the results files and writes into figures/:
                                      and decoy setup (from results/alarm_tradeoff.json)
   deterrence_{light,dark}.png        how often a hijacked agent sent anything out, by the share of decoys
                                      (from results/deterrence.json)
+  ablations_{light,dark}.png         expected loss of the full game, the game with one part removed, and simple
+                                     rules, in three situations (from results/placement_comparison.json)
+  false_alarms_{light,dark}.png      false alarms against the share of honest work that touches sensitive files,
+                                     by alarm rule and decoy realism (from results/false_alarm_curve.json)
 """
 from __future__ import annotations
 
@@ -187,13 +191,107 @@ def deterrence_chart(data, theme):
     return fig
 
 
+# ---------------------------------------------------------------------------------------------- ablations
+
+ABLATION_ROWS = [("game", "Game (full model)", 0), ("game, naive thieves only", "Game, naive thieves only", 1),
+                 ("game, no false-alarm cost", "Game, no false-alarm cost", 1),
+                 ("value-proportional", "Split by value", 2), ("same-per-type", "Same number in every type", 2),
+                 ("random", "Random split", 2), ("crown-jewels", "All on passwords", 2)]
+ABLATION_PANELS = [("high", 1000, "Attacks common,\nrealistic decoys"), ("low", 1000, "Attacks common,\nlow-realism decoys"),
+                   ("high", 100000, "Attacks rare (1 per 100,000\nhonest requests), realistic decoys")]
+
+
+def ablation_chart(data, theme, profile="Qwen3", budget=9):
+    t = THEMES[theme]
+    colors = [t["series"][0], t["series"][1], t["muted"]]
+    fig, axes = plt.subplots(1, 3, figsize=(9, 4.9), facecolor=t["surface"], sharey=True)
+    title(fig, t, "Which parts of the game matter, and when",
+          f"{profile}, {budget} decoys available; expected loss, lower is better. A game with one part removed chooses its\n"
+          "placement without that part, then is scored with the full model.")
+    handles = [Line2D([0], [0], color=c, linewidth=6) for c in colors]
+    fig.legend(handles, ["Full game model", "Game with one part removed", "Simple rule"], loc="upper left",
+               bbox_to_anchor=(0.055, 0.80), ncol=3, frameon=False, fontsize=8.5, labelcolor=t["ink2"], handlelength=1.2,
+               columnspacing=1.6)
+    rows = data["profiles"][profile]["ablations"]
+    ys = list(range(len(ABLATION_ROWS)))[::-1]
+    for ax, (realism, rpa, name) in zip(axes, ABLATION_PANELS):
+        style(ax, t)
+        ax.grid(False)
+        ax.grid(axis="x", color=t["grid"], linewidth=0.6)
+        cell = next(r for r in rows if r["realism"] == realism and r["requests_per_attack"] == rpa and r["budget"] == budget)
+        losses = [-cell[key]["payoff"] for key, _, _ in ABLATION_ROWS]
+        top = max(losses) * 1.32
+        for y, loss, (key, _, kind) in zip(ys, losses, ABLATION_ROWS):
+            ax.barh(y, loss, height=0.62, color=colors[kind], zorder=3)
+            ax.text(loss + top * 0.015, y, f"{loss:.2f}", va="center", ha="left", fontsize=8, color=t["ink"])
+        ax.set_xlim(0, top)
+        ax.set_title(name, loc="left", fontsize=9, color=t["ink"], pad=6)
+        ax.set_xlabel("expected loss", fontsize=8.5, color=t["ink2"])
+    axes[0].set_yticks(ys)
+    axes[0].set_yticklabels([label for _, label, _ in ABLATION_ROWS], fontsize=8.5)
+    for ax in axes[1:]:
+        ax.tick_params(labelleft=False)
+    fig.subplots_adjust(left=0.2, right=0.98, top=0.66, bottom=0.11, wspace=0.08)
+    return fig
+
+
+# ---------------------------------------------------------------------------------------------- false alarms
+
+FA_RULES = [("any_sighting", "shown in a file list", 0), ("access", "found by a search", 1), ("send_out", "sent outside", 3)]
+
+
+def false_alarm_chart(data, theme):
+    t = THEMES[theme]
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4.9), facecolor=t["surface"], sharey=True)
+    title(fig, t, "False alarms grow with the share of honest work that touches sensitive files",
+          "Mixed from the rates measured on normal and on sensitive tasks. Lines: high-realism decoys; shaded: the range\n"
+          "from low to high realism. Each line is one alarm rule, named by what a decoy must go through to set it off.")
+    fs = [i / 100 for i in range(101)]
+    for ax, model in zip(axes, ("Claude", "Qwen3")):
+        style(ax, t, xgrid=True)
+        cells = data["models"][model]
+        for rule, label, i in FA_RULES:
+            def curve(cell):
+                r = cell["rules"][rule]
+                return [100 * ((1 - f) * r["normal"] + f * r["sensitive"]) for f in fs]
+            curves = [curve(c) for c in cells.values()]
+            lo = [min(v) for v in zip(*curves)]
+            hi = [max(v) for v in zip(*curves)]
+            ax.fill_between([100 * f for f in fs], lo, hi, color=t["series"][i], alpha=0.18, linewidth=0, zorder=2)
+            ys = curve(cells["high"])
+            ax.plot([100 * f for f in fs], ys, color=t["series"][i], linewidth=2, zorder=3, solid_capstyle="round")
+            # rising lines: label above-left or below-right of a point, where the line cannot run into it
+            if rule == "send_out":
+                ax.text(98, ys[-1] + 2.2, label + ": never fired", va="bottom", ha="right", fontsize=8, color=t["ink2"])
+            elif rule == "access":
+                ax.text(54, ys[54] - 2.5, label, va="top", ha="left", fontsize=8, color=t["ink2"])
+            else:
+                ax.text(62, ys[62] + 2.5, label, va="bottom", ha="right", fontsize=8, color=t["ink2"])
+        n = data["task_set"][model]           # the tasks behind the alarm chart: where its false alarms sit on this one
+        mix = 100 * n["sensitive"] / (n["sensitive"] + n["standard"])
+        ax.axvline(mix, color=t["muted"], linewidth=1, linestyle=(0, (2, 2)), zorder=1)
+        ax.text(mix + 1.5, 57, f"all our tasks\n({n['sensitive']} of {n['sensitive'] + n['standard']})", fontsize=7.5,
+                color=t["muted"], va="top")
+        ax.set_title(f"{model}: honest agent", loc="left", fontsize=9, color=t["ink"], pad=6)
+        ax.set_xlim(0, 100)
+        ax.set_ylim(-1, 64)
+        percent_axis(ax.xaxis, range(0, 101, 25))
+        percent_axis(ax.yaxis, range(0, 61, 10))
+        ax.set_xlabel("share of honest tasks that need sensitive files", fontsize=8.5, color=t["ink2"])
+    axes[0].set_ylabel("honest tasks that set off the alarm", fontsize=8.5, color=t["ink2"])
+    axes[1].tick_params(labelleft=False)
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.76, bottom=0.12, wspace=0.08)
+    return fig
+
+
 # ---------------------------------------------------------------------------------------------- main
 
 def main():
     installed = {f.name for f in font_manager.fontManager.ttflist}      # the first of these that is installed
     plt.rcParams["font.family"] = next(f for f in ("Inter", "Segoe UI", "DejaVu Sans") if f in installed)
     charts = [("placement_loss", "placement_comparison.json", loss_chart), ("alarm_tradeoff", "alarm_tradeoff.json", alarm_chart),
-              ("deterrence", "deterrence.json", deterrence_chart)]
+              ("deterrence", "deterrence.json", deterrence_chart), ("ablations", "placement_comparison.json", ablation_chart),
+              ("false_alarms", "false_alarm_curve.json", false_alarm_chart)]
     for name, source, make in charts:
         data = json.load(open(os.path.join(ROOT, "results", source), encoding="utf-8"))
         for theme in THEMES:

@@ -2,7 +2,7 @@
 
 Two groups of tasks (--tasks standard, sensitive or all; default all)
   standard    AgentDojo's 40 normal workspace tasks. None of them needs a sensitive file.
-  sensitive   our 12 honest tasks that do need one: passwords, customer records, bank details
+  sensitive   our 18 honest tasks that do need one: passwords, customer records, bank details
               (see sensitive_tasks.py). They cannot run in the "pristine" setting.
 
 Nobody is attacking here, so every alarm is a false alarm. This measures, for each decoy setting:
@@ -364,7 +364,7 @@ def main(argv=None):
     p.add_argument("--provider", choices=providers.PROVIDERS, default="anthropic")
     p.add_argument("--model", default=None, help="model name (default: claude-haiku-5-5, or qwen3:8b for ollama)")
     p.add_argument("--tasks", choices=("all", "standard", "sensitive"), default="all",
-                   help="AgentDojo's 40 normal tasks, our 12 sensitive tasks, or both (default)")
+                   help="AgentDojo's 40 normal tasks, our 18 sensitive tasks, or both (default)")
     p.add_argument("--settings", default="all", help="comma-separated setting names, or 'all'")
     p.add_argument("--reps", type=int, default=1, help="repetitions of each (setting, task)")
     p.add_argument("--limit", type=int, default=None, help="run at most this many (for a smoke test)")
