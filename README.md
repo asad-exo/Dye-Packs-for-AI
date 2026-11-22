@@ -94,7 +94,7 @@ Where to put decoys, and which alarm rule to use (November 2026; `experiments/pl
 
 All are within 8 points, about the sampling noise for 26-27 thefts (one standard error is 7-10 points). This is a consistency check, not a test on fresh data: the two numbers came from these same runs. Low-realism decoys against a decoy-aware thief are left out, because the "seen through" share was measured on high-realism decoys. For Claude, fitted the same way: every naive theft detected (20 thefts; model 100%), and decoy-aware thefts detected 55% with 2 high-realism decoys per type (40 thefts; model 50%) and 69% with 4 (16 thefts; model 67%).
 
-A test on fresh data is set up: the placement the game recommends for Qwen3 (2 password decoys, 1 each for customer records and bank details), which no run has used before. The model's prediction was written down before any of those runs, in `results/validation_prediction.json`: 91% of naive thefts and 35% of decoy-aware thefts detected. `python experiments/validation.py` compares it with the runs.
+A test on fresh data is set up: the placement the game recommends for Qwen3 (2 password decoys, 1 each for customer records and bank details), which no run has used before. The model's prediction was written down before any of those runs, in `results/validation_prediction.json`: 91% of naive thefts and 35% of decoy-aware thefts detected. A second test does the same for Claude: 1 decoy per type, what the game recommends against Claude, never used in its hijack runs before; predicted in `results/validation_prediction_claude.json`: every naive theft and 33% of decoy-aware thefts detected. `python experiments/validation.py` (add `--model claude` for the second test) compares a prediction with the runs.
 
 **Which alarm rule.** For each decoy setup and alarm rule, straight from the runs with no model in between: the share of the 52 honest tasks that set off the alarm (the 40 normal tasks and the 12 that need sensitive files, each task counted once), against the share of thefts it detected (direct-mode runs in which the agent sent something out; detected means the alarm went off at some point in the run).
 
@@ -136,7 +136,7 @@ Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environme
 | `experiments/check_setup.py` | Free check that all three provider connections work (the network is faked; no key, no cost). |
 | `experiments/placement_comparison.py` | Scores four ways of placing decoys (the game's choice, the same number in every type, a random split, all on passwords) with the game model and the numbers the runs measured. Also checks the model against the hijack runs, and changes the assumptions one at a time. |
 | `experiments/alarm_tradeoff.py` | For each alarm rule and decoy setup: false alarms on honest tasks against thefts detected, straight from the runs. |
-| `experiments/validation.py` | A test of the model on fresh data: writes down its prediction for a placement never run before (`--predict`), then compares it with the runs. |
+| `experiments/validation.py` | Tests of the model on fresh data: writes down its prediction for a placement never run before (`--predict`), then compares it with the runs. One test per model. |
 | `experiments/pilot/` | The October feasibility pilot: `run_pilot.py` (real AI agents; needs a key), `scripted_decoy_test.py`, `summarize_pilot.py`. |
 | `results/` | `honest/` and `hijack/`: one line per agent run, per model. `placement_comparison.json` and `alarm_tradeoff.json`: the two analyses above. `pilot/`: the October pilot. `offline_check.json`: the scripted attackers. |
 | `model/simple_model_check.py` | Early sketch from the proposal stage, replaced by the two model files above. |
@@ -249,3 +249,7 @@ The full default run is 73 agent runs and cost about $0.20 on Claude Haiku 5.5 i
 
 - All data in AgentDojo is synthetic. The "attacker" address and the decoy contents are made up.
 - AgentDojo 0.1.35 does not work with current versions of the Anthropic library as shipped. `experiments/anthropic_compat.py` and `experiments/providers.py` fix the problems found so far, for each provider; every script that runs a model imports them first.
+
+## License
+
+All rights reserved; see [LICENSE](LICENSE). The repository is public so that it can be read and reviewed, not reused. Versions before 22 November 2026 were released under the MIT License.
