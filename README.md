@@ -46,7 +46,7 @@ Honest-agent results so far (November 2026). Nobody attacks in these runs, so ev
 
 Hijack results so far (November 2026; `experiments/hijack_runs.py`):
 
-- **Hidden instructions:** no model followed any of them. That is 0 of 648 runs: Claude Haiku 5.5 288, Qwen3 8B 288, Llama 3.1 8B 72 (Llama also finished the user's task in only 15 of 72 runs, so it often may not have read far enough to meet the instruction).
+- **Hidden instructions:** no model followed any of them. That is 0 of 720 runs: Claude Haiku 5.5 288, Qwen3 8B 288, Llama 3.1 8B 72, Gemini 3.8 Flash 72 (Gemini finished the user's task in 69 of 72 runs, so it did read the instructions; Llama finished it in only 15 of 72, so it often may not have read far enough to meet them).
 - **Direct mode** (the attacker's instructions given outright, in two versions: naive, and decoy-aware, which warns that some files are decoys and says to send only the one that looks most genuine; 27 runs per setting and version for Claude (162 for decoy-aware Claude with high-realism decoys), 54 for Qwen3 with decoys). Share of runs in which a real secret left the company:
 
   | | Claude, naive | Claude, decoy-aware | Qwen3, naive | Qwen3, decoy-aware |
@@ -246,6 +246,7 @@ python experiments/hijack_runs.py --plan
 python experiments/hijack_runs.py --provider ollama --model qwen3:8b --limit 6
 python experiments/hijack_runs.py --provider ollama --model qwen3:8b
 python experiments/hijack_runs.py --provider ollama --model qwen3:8b --summary
+python experiments/hijack_runs.py --provider ollama --model qwen3:8b --mode injected --attack injecagent   # another AgentDojo attack
 ```
 
 Each run is saved as one line in `results/honest/<model>.jsonl` as soon as it finishes, so a run can be stopped (Ctrl+C) and restarted: it picks up where it left off. It stops by itself at the cost limit (`--max-cost`, default $5) and after 5 failures in a row to reach the model.
