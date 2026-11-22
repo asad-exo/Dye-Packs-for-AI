@@ -1,8 +1,10 @@
 # The decoy game
 
-This is the model behind the project, written so it can be explained at a whiteboard. Code that checks every claim: `simple_model.py` and `placement_solver.py`.
+This is the model behind the project, written so it can be explained at a whiteboard. Part A is the simple model from the proposal. Part B is the model after the experiments: what they measured, and how that changes the game. Code that checks every claim: `simple_model.py` (Part A) and `placement_solver.py` (Part B).
 
-## 1. One kind of asset
+# Part A: the simple model
+
+## 1. One kind of file
 
 **Setting.** The agent's drive holds password files. A share **q** of them are decoys that look like the real ones. An attacker's hidden note makes the hijacked agent grab one file.
 
@@ -47,37 +49,68 @@ Why: more decoys than q* only add false alarms, since the attacker is already de
 - if (1 − p)·(L + G) < F·h, stop at **q\***
 - if (1 − p)·(L + G) > F·h, keep adding decoys up to whatever cap is practical
 
-**What this means for the "sweet spot".** With costs that grow in a straight line, the best q sits at one of three points: 0, q*, or the cap. q* is the interior sweet spot. A smoother peak appears when false alarms grow faster than linearly in q (an agent surrounded by decoys trips over them disproportionately). Whether that happens is an empirical question the experiments will answer by measuring h at different decoy counts.
+**What this means for the "sweet spot".** With costs that grow in a straight line, the best q sits at one of three points: 0, q*, or the cap. q* is the interior sweet spot.
 
-## 2. Several kinds of assets
+# Part B: the model after the experiments
 
-Now there are asset classes t = credentials, customer records, bank details. Each has its own values V_t, C_t, L_t, G_t and its own honest-agent rate h_t. The defender picks a decoy share q_t for each class, and cannot exceed a false-alarm budget B:
+## 2. What the experiments showed
 
-    sum over t of  h_t · q_t  ≤  B
+Three findings do not fit Part A. Each comes from runs with real AI agents (`results/honest/`, `results/hijack/`; numbers in the main README).
 
-The attacker sees the policy and attacks the class where (1 − q_t)·V_t − q_t·C_t is largest.
+1. **The cost of decoys switches on; it does not grow with each decoy.** With 1, 2 or 4 decoys per type, honest agents ran into them about equally often: an honest search either goes near the password files or it does not. So protecting a type of file has a **fixed cost**, plus only a small extra per decoy. (The weakest agent, Qwen3, did get somewhat worse with more decoys: its right answers went from 100% to 83% to 78% at 1, 2 and 4 decoys per type. So the per-decoy cost is small, not zero.)
+2. **Decoys also cost honest work through confusion, not only through alarms.** Decoys hold different values from the real file. When a request did not name the file, the agent gave the right answer in 86-96% of runs instead of 100%. With the alarm that fires only when a decoy is sent outside the company, honest agents caused no false alarms at all (0 of 1,094 runs), so most of the cost is confusion.
+3. **Hijacked agents often take everything at once.** A plain hijacked agent usually emailed every matching file in one message (Claude: 20 of 20 times it sent anything; Qwen3: 63 of 81 runs). The decoys in that message set off the alarm, but the real secret left with them: **detected, not prevented.** A decoy-aware agent sent a single file. Against realistic decoys it still picked a decoy about half the time (a blind pick would hit one 50-67% of the time), so it saw through few of them.
 
-This is a Stackelberg security game where decoy share plays the role of "coverage". In the standard notation, the covered and uncovered payoffs are U_d^c = G_t, U_d^u = −L_t, U_a^c = −C_t, U_a^u = V_t. What is new is the false-alarm budget, which replaces the usual limit on the number of guards: decoys are cheap to make, and what limits them is the honest agent tripping over them.
+## 3. The model, as measured
 
-**How it is solved.** For each class the attacker might choose, solve one linear program: maximize the defender's payoff subject to (a) the attacker really does prefer that class and (b) the false-alarm budget. Keep the best of these. This is the multiple-LP method of Conitzer and Sandholm (2006).
+**Cost of protecting a type of file t.**
 
-**Intuition for the answer.** The solver puts more decoys where the attacker gains most and where the honest agent rarely goes (low h_t), until the attacker is indifferent between classes. Spreading decoys evenly wastes budget on classes the honest agent uses a lot.
+    cost = K_t  (once, if the type has any decoys)  +  h_t · q_t
 
-## 3. Several kinds of attackers
+K_t is the fixed cost (mostly confusion of honest work, plus any false alarms). It is large for a type that honest staff often look for without naming the file, such as passwords, and small for one they rarely need. h_t is the small extra cost per unit of decoy share. Both are subtracted from the defender's payoff, as in Part A.
 
-Attackers differ. A **naive** attacker does not think about decoys. A **decoy-aware** attacker recognizes and avoids a share of them, so it faces less coverage than the defender planted. The defender does not know which type it faces, only the mix (say 70% naive, 30% aware), and maximizes its expected payoff over that mix. This is a Bayesian Stackelberg game (Paruchuri et al., 2008). At this size it is solved by one linear program per combination of the types' choices.
+**Kinds of thief.** Each thief knows the defender's policy, but not which files are fake.
 
-In the code, a type's `evade` is the share of decoys it avoids; the coverage it faces is (1 − evade)·q_t. That is a linear approximation, reasonable when q_t is not large. The share avoided depends on decoy realism, and will be measured in the experiments.
+| Kind | What it does | If the type it targets has decoys | If it has none |
+|---|---|---|---|
+| **Pick-one** | sends a single file | the file is a decoy with chance c = (1 − e)·q: thief gets (1 − c)·V − c·C, defender gets c·G − (1 − c)·L | thief V, defender −L |
+| **Grab-everything** | sends every matching file | always detected, but the real secret leaves too: thief V − C, defender −L + G | thief V, defender −L |
 
-## 4. From shares to decoys
+e is the share of decoys the thief can recognize: 0 for a naive thief, more for a decoy-aware one. Every thief can also **choose not to attack**, which is worth 0 to both sides. G is now the value of detection itself: blocking the agent and changing the stolen passwords.
 
-If a class has n real items, a decoy share q needs k = q·n / (1 − q) decoys. With only two real items per class this rounding is coarse (0, 1 or 2 decoys), so the experiments will either use more real items per class or randomize the rounding.
+**Result 3 (protect or not).** With a fixed cost, the real decision is *which types of file to protect*. For a protected type, the best share is still the smallest one that does the job: the type's q\* (raised to make up for what decoy-aware thieves see through), or the cap when many thieves attack regardless. Protect a type only if what protection saves, in attacks deterred or caught, is worth more than its fixed cost K_t.
 
-## 5. What is assumed, and what gets measured
+**Result 4 (grab-everything thieves).** One decoy in a type is enough to detect every grab-everything thief that targets it; more decoys add nothing against them. Detection does not stop the leak. It deters such a thief only if being caught costs it more than the secret is worth (C > V). Otherwise decoys turn a silent theft into a detected one.
+
+**Result 5 (thieves go where the decoys are not).** Protecting one type pushes thieves to the types left open. So all types must be decided together, and protecting only some types can be pointless.
+
+*Examples* (illustrative numbers, from `placement_solver.py`; three types, half the thieves grab everything, the rest pick one file, some of them decoy-aware):
+
+- **Thieves fear getting caught (C greater than V):** protect every type with just enough decoys that attacking does not pay. Every thief stays away.
+- **Protecting passwords is very costly** (honest staff search for them constantly): protect *nothing*. Thieves would simply go for the passwords, so protecting the other types would be wasted (Result 5).
+- **Getting caught does not scare thieves (C less than V):** decoys cannot deter, so the best use is to *steer*. Protect the passwords and bank details, and leave customer records open, so thieves take the least damaging target.
+
+## 4. Several types of file and several kinds of thief: the solver
+
+This is a Stackelberg security game in which decoy share plays the role of "coverage". In the standard notation, the covered and uncovered payoffs for a pick-one thief are U_d^c = G_t, U_d^u = −L_t, U_a^c = −C_t, U_a^u = V_t. What is new:
+
+- the cost of coverage is measured on honest agents, and it is mostly fixed, not proportional to coverage
+- some thieves grab everything, so coverage detects them without protecting the asset
+- the defender does not know which kind of thief it faces, only the mix (a Bayesian Stackelberg game; Paruchuri et al., 2008)
+
+**How it is solved.** For each set of protected types (8 sets for 3 types) and each combination of the thieves' choices (including not attacking), solve one linear program: maximize the defender's expected payoff, minus the protection costs, subject to every kind of thief really preferring its choice. Keep the best. This is the multiple-LP method of Conitzer and Sandholm (2006), run once per protected set. It is exact, and at this size it takes seconds. The code checks it against the one-type formulas of Part A and against a brute-force grid search on 40 random games.
+
+## 5. From shares to decoys
+
+If a type has n real files, a decoy share q needs k = q·n / (1 − q) decoys. With only two real files per type this rounding is coarse (0, 1 or 2 decoys), so the experiments either use more real files per type or randomize the rounding.
+
+## 6. What is assumed, and what is measured
 
 | Quantity | Status |
 |---|---|
-| V, C, L, G, F | Chosen for illustration; results will be reported across a range of values |
-| h_t (honest-agent false alarms) | **Measured** with real AI agents on normal tasks |
-| catch rates per attacker type and realism | **Measured** with the scripted attackers (and later real hijacks) |
-| attacker mix | Assumed; varied in a sensitivity check |
+| V, C, L, G | Chosen for illustration; results are reported across a range of values |
+| K_t, the fixed cost of protecting a type | **Measured** per request: no cost when the request names the file; right answer 86-96% instead of 100% when it does not. How often honest work looks for each type is assumed and varied |
+| h_t, the extra cost per decoy | **Measured** small (larger for the weakest agent) |
+| Share of grab-everything thieves | **Measured** on hijacked agents: most plain hijacked agents sent everything at once |
+| e, decoys a decoy-aware thief recognizes | **Measured**: Qwen3 picked a decoy 31% of the time against low-realism decoys (a blind pick: 50%), and about half the time against high-realism ones (a blind pick: 50-67%) |
+| Mix of thief kinds | Assumed; varied in a sensitivity check |

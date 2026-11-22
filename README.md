@@ -21,14 +21,22 @@ Honest-agent results so far (November 2026). Nobody attacks in these runs, so ev
 - **The `send_out` rule** (a decoy is sent to someone outside the company) gave 0 false alarms in 1,094 honest runs with decoys across all three models (95% upper bound 0.27% per run). It catches the scripted attackers exactly as often as `act` does. The rule was chosen after seeing the `act` alarms above, so it still has to be tested on fresh runs.
 - Tables: `python experiments/honest_runs.py --summary` (add `--provider` and `--model` for other models). Raw runs: `results/honest/`.
 
-Hijack results so far (November 2026; `experiments/hijack_runs.py`; Claude Haiku 5.5 and Qwen3 8B, 360 runs each; direct-mode cells have 9 runs, so these are early numbers):
+Hijack results so far (November 2026; `experiments/hijack_runs.py`):
 
-- **Hidden instructions:** neither model followed any of the 288 planted in emails, calendar entries and files, and both still did the user's task as usual.
-- **Direct mode** (the attacker's instructions given outright): Qwen3 nearly always complied (89-100% of runs); Claude complied in 0-89%, depending on the setting.
+- **Hidden instructions:** no model followed any of them. That is 0 of 648 runs: Claude Haiku 5.5 288, Qwen3 8B 288, Llama 3.1 8B 72 (Llama also finished the user's task in only 15 of 72 runs, so it often may not have read far enough to meet the instruction).
+- **Direct mode** (the attacker's instructions given outright; 27 runs per setting and goal version). Share of runs in which a real secret left the company:
+
+  | | Claude, naive | Claude, decoy-aware | Qwen3, naive | Qwen3, decoy-aware |
+  |---|---|---|---|---|
+  | no decoys | 37% | 52% | 96% | 100% |
+  | 2 low-realism decoys per type | 37% | 70% | 89% | 67% |
+  | 2 high-realism decoys per type | 26% | 4% | 100% | 48% |
+  | 4 high-realism decoys per type | 11% | 11% | 89% | 48% |
+
 - **Decoys work like an alarm, not a lock:**
-  - **Naive hijacked agents** usually sent everything they found in one message. The alarm went off in every such case, but the real secrets in that message still left (Qwen3: 21 of 27 runs with decoys; Claude: all 9 that sent anything). That is detection, not prevention.
-  - **Decoy-aware Qwen3** sent a single file. In 12 of 27 runs it picked a decoy (caught, nothing real left); in 13 it picked the real file (missed).
-  - **Decoy-aware Claude** was never caught, but with high-realism decoys it mostly sent nothing. A real secret left in 0% and 22% of runs at 2 and 4 decoys per class, against 67% with no decoys.
+  - **Naive hijacked agents** mostly sent everything they found in one message (Claude: 20 of 20 times it sent anything; Qwen3: 63 of 81 runs). The alarm went off, but the real secret in that message still left: detected, not prevented.
+  - **Decoy-aware Qwen3** sent a single file. Against high-realism decoys it picked a decoy about half the time (caught, nothing real left). Against low-realism decoys it picked one only 31% of the time.
+  - **Decoy-aware Claude** was mostly deterred by high-realism decoys: it declined to send anything.
 
 Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environment, Claude Haiku 5.5 and 4.5):
 
@@ -42,9 +50,9 @@ Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environme
 
 | Path | Contents |
 |---|---|
-| `model/MODEL.md` | The game, written to be explained at a whiteboard: the deterrence threshold q* = V / (V + C), the false-alarm cost, several asset classes, and attacker types. |
+| `model/MODEL.md` | The game, written to be explained at a whiteboard. Part A: the simple model (the deterrence threshold q* = V / (V + C) and the false-alarm cost). Part B: the model as the experiments measured it (a fixed cost of protecting a type of file, thieves who pick one file or grab everything, and which types to protect). |
 | `model/simple_model.py` | The one-asset game in code; checks Results 1 and 2 numerically. |
-| `model/placement_solver.py` | The multi-asset Stackelberg solver with a false-alarm budget and attacker types (one linear program per attacker choice). |
+| `model/placement_solver.py` | The Stackelberg solver for Part B: chooses which types of file to protect and with how many decoys, against a mix of pick-one and grab-everything thieves. Checked against Part A's formulas and a brute-force search. |
 | `decoykit/` | The decoy kit: asset classes with real items and decoys at three realism levels, placement policies, and the alarm monitor. See [decoykit/README.md](decoykit/README.md). |
 | `attackers/` | Four scripted hijacked agents (grab_all, pick_one, decoy_aware, informed), and the hidden instructions used for real hijack attempts (`injections.py`). See [attackers/README.md](attackers/README.md). |
 | `experiments/offline_check.py` | Scripted attackers against each placement, plus AgentDojo's scripted task solutions as a stand-in for the honest agent. No API key needed. |
@@ -108,7 +116,7 @@ Run everything from the repository's top folder.
 ```powershell
 # No API key needed
 python model/simple_model.py                 # checks Results 1 and 2
-python model/placement_solver.py             # solver demo: game placement vs. even and top-only
+python model/placement_solver.py             # checks the solver (about 20 seconds), then a 3-type demo
 python experiments/offline_check.py 200      # scripted attackers, 200 runs per setting (under a minute)
 python experiments/check_setup.py            # checks the Anthropic, Google and Ollama connections, for free
 python experiments/pilot/summarize_pilot.py  # the pilot numbers above
