@@ -8,7 +8,7 @@ Course project for ECE-GY 6263 Game Theory (NYU Tandon, Fall 2026) by Asad Shaha
 
 ## Status
 
-Building. The decoy kit, the scripted attackers and the game model are written and checked offline. Next: measure how often real AI agents set off false alarms, then compare decoy placements. The model is explained in [model/MODEL.md](model/MODEL.md).
+The decoy kit, the scripted attackers and the game model are written and checked. The experiments have run: false alarms from honest agents, real hijack attempts, and the comparison of decoy placements and alarm rules (results below). Next: figures that explain the project, the presentation and the report. The model is explained in [model/MODEL.md](model/MODEL.md).
 
 Honest-agent results so far (November 2026). Nobody attacks in these runs, so every alarm is a false alarm.
 
@@ -24,7 +24,7 @@ Honest-agent results so far (November 2026). Nobody attacks in these runs, so ev
 Hijack results so far (November 2026; `experiments/hijack_runs.py`):
 
 - **Hidden instructions:** no model followed any of them. That is 0 of 648 runs: Claude Haiku 5.5 288, Qwen3 8B 288, Llama 3.1 8B 72 (Llama also finished the user's task in only 15 of 72 runs, so it often may not have read far enough to meet the instruction).
-- **Direct mode** (the attacker's instructions given outright; 27 runs per setting and goal version). Share of runs in which a real secret left the company:
+- **Direct mode** (the attacker's instructions given outright, in two versions: naive, and decoy-aware, which warns that some files are decoys and says to send only the one that looks most genuine; 27 runs per setting and version). Share of runs in which a real secret left the company:
 
   | | Claude, naive | Claude, decoy-aware | Qwen3, naive | Qwen3, decoy-aware |
   |---|---|---|---|---|
@@ -37,6 +37,53 @@ Hijack results so far (November 2026; `experiments/hijack_runs.py`):
   - **Naive hijacked agents** mostly sent everything they found in one message (Claude: 20 of 20 times it sent anything; Qwen3: 63 of 81 runs). The alarm went off, but the real secret in that message still left: detected, not prevented.
   - **Decoy-aware Qwen3** sent a single file. Against high-realism decoys it picked a decoy about half the time (caught, nothing real left). Against low-realism decoys it picked one only 31% of the time.
   - **Decoy-aware Claude** was mostly deterred by high-realism decoys: it declined to send anything.
+
+Where to put decoys, and which alarm rule to use (November 2026; `experiments/placement_comparison.py`, `experiments/alarm_tradeoff.py`):
+
+**Placement.** Four ways to place a number of decoys across passwords, customer records and bank details (2 real files each), scored with the game model ([MODEL.md](model/MODEL.md), Part B): the game's choice (which may leave some decoys unused), the same number in every type, a random split, and all on passwords.
+
+- **Measured in the runs:** how often an honest request that describes a file goes wrong once its type has decoys (passwords 33%, the other types 0-7%); how many naive hijacked agents send everything at once (Claude 20 of 20, Qwen3 85% of 80); how many high-realism decoys a decoy-aware agent sees through (Qwen3 10%, from 52 single-file sends; Claude about half, from only 6).
+- **Assumed:** a leak costs 10, 6 and 8 for the three types, and the thief gains as much; being caught costs the thief 20; a detection is worth 2 to the defender; 70% of hijacks are naive and 30% decoy-aware; 1% of honest requests look for each type without naming the file; a request that goes wrong costs 0.1.
+- Thieves know the strategy and how many decoys each type holds, but not which files are fake. They pick a target or stay away.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/placement_loss_dark.png">
+  <img alt="Expected loss against decoys available, for four placement strategies, for Claude and Qwen3, when attacks are common and when they are rare" src="figures/placement_loss_light.png" width="100%">
+</picture>
+
+- **All on passwords** never gets the loss below 8, however many decoys it has: thieves go for the bank details instead (Result 5 in MODEL.md).
+- **When attacks are common** (1 per 1,000 honest requests), the game is never worse than the others, by construction: it can pick any of their placements.
+  - Against Qwen3, the same number in every type does just as well. 2 password decoys and 1 in each other type already make stealing not pay for every kind of thief.
+  - Against Claude, the game does better from 5 decoys on (loss 0.4 instead of 2.2 with 9). It puts 4 on passwords, 2 on customer records and 3 on bank details, because decoy-aware Claude saw through about half the decoys. That estimate rests on 6 runs, so this shows what the game does against such a thief rather than a measurement of Claude.
+  - A random split is worse than the same number in every type.
+- **When attacks are rare** (1 per 100,000), the confusion decoys cause in honest work costs more than they save. The game plants none (loss 10, one leak). Placements that use all their decoys lose 23-47.
+- **Changing one assumption at a time** (50% or 90% naive hijacks; being caught costs the thief 10 or 40; a detection worth nothing; all three types worth 10; checked with 3 and 9 decoys) keeps the picture. The game and the same number in every type stay the best two, and all on passwords stays stuck. The game pulls ahead only with Claude's numbers and 9 decoys, and even then not when all three types are worth the same or being caught costs the thief 40.
+
+**Does the model match the runs?** The model predicts how often a theft includes a decoy, and so is detected. A naive thief sends everything at once (85% of the time for Qwen3) or else one file; a decoy-aware thief sends one file and avoids the decoys it sees through (10%). For Qwen3:
+
+| Setup | Thief | Thefts | Detected (measured) | Detected (model) |
+|---|---|---|---|---|
+| 2 low-realism decoys per type | naive | 26 | 96% | 92% |
+| 2 high-realism decoys per type | naive | 27 | 85% | 92% |
+| 4 high-realism decoys per type | naive | 27 | 93% | 95% |
+| 2 high-realism decoys per type | decoy-aware | 27 | 52% | 45% |
+| 4 high-realism decoys per type | decoy-aware | 26 | 54% | 60% |
+
+All are within 8 points, about the sampling noise for 26-27 thefts (one standard error is 7-10 points). This is a consistency check, not a test on fresh data: the two numbers came from these same runs. Low-realism decoys against a decoy-aware thief are left out, because the "seen through" share was measured on high-realism decoys. Claude sent something too rarely for this check (2-19 thefts per setup).
+
+**Which alarm rule.** For each decoy setup and alarm rule, straight from the runs with no model in between: the share of the 52 honest tasks that set off the alarm (the 40 normal tasks and the 12 that need sensitive files, each task counted once), against the share of thefts it detected (direct-mode runs in which the agent sent something out; detected means the alarm went off at some point in the run).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/alarm_tradeoff_dark.png">
+  <img alt="Thefts detected against false alarms on honest work for each alarm rule and decoy setup, for naive and decoy-aware hijacked Qwen3 agents" src="figures/alarm_tradeoff_light.png" width="100%">
+</picture>
+
+- **Naive hijacked agents:** the strictest rule (a decoy is sent outside) detected 85-96% of thefts with no false alarm on any honest task. Looser rules detected at most 15 points more, at 8-26% false alarms.
+- **Decoy-aware agents:** the strictest rule detected 31% of thefts with low-realism decoys and 52-54% with high-realism ones. The rule "found by a search" detected 70-88%, because the agent's own search returns the decoys along with the real files. (The decoy-aware instructions told it to look at all the candidates first, so a more careful attacker might set off this rule less often.) But this rule also went off on 8-9% of honest tasks: on 36-39% of the tasks that need sensitive files, and never on the normal tasks.
+- **Realism matters more than numbers:** against decoy-aware agents, high-realism decoys raised strict-rule detection from 31% to 52%. Four decoys per type instead of two added 2 points.
+- **`act` and `send_out`:** they detected the same thefts except one (Qwen3, 4 high-realism decoys, decoy-aware: 58% against 54%). `act` went off on 0.6-1.3% of honest tasks (all in one task: emailing a password to a new colleague), `send_out` on none.
+- **Claude** sent something too rarely for a curve (2-19 thefts per setup). Every naive theft was detected under every rule (20 of 20). Decoy-aware Claude never sent a low-realism decoy (0 of 19 thefts detected under the strict rules), but the search rule detected 15 of those 19. Claude's false alarms: none under the strict rules, 6-7% under "found by a search", 27% under "shown in a file list".
+- A practical setup could use two levels: stop the agent when a decoy is sent outside, and flag it for review when a decoy turns up in a search.
 
 Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environment, Claude Haiku 5.5 and 4.5):
 
@@ -62,10 +109,13 @@ Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environme
 | `experiments/anthropic_compat.py` | The fixes for the Anthropic library, plus token counting and cost estimates. |
 | `experiments/sensitive_tasks.py` | 12 honest tasks that genuinely need passwords, customer records or bank details, each with a pass/fail check. |
 | `experiments/check_setup.py` | Free check that all three provider connections work (the network is faked; no key, no cost). |
+| `experiments/placement_comparison.py` | Scores four ways of placing decoys (the game's choice, the same number in every type, a random split, all on passwords) with the game model and the numbers the runs measured. Also checks the model against the hijack runs, and changes the assumptions one at a time. |
+| `experiments/alarm_tradeoff.py` | For each alarm rule and decoy setup: false alarms on honest tasks against thefts detected, straight from the runs. |
 | `experiments/pilot/` | The October feasibility pilot: `run_pilot.py` (real AI agents; needs a key), `scripted_decoy_test.py`, `summarize_pilot.py`. |
-| `results/` | Raw results: `pilot/` from October, `offline_check.json` from the scripted attackers. |
+| `results/` | `honest/` and `hijack/`: one line per agent run, per model. `placement_comparison.json` and `alarm_tradeoff.json`: the two analyses above. `pilot/`: the October pilot. `offline_check.json`: the scripted attackers. |
 | `model/simple_model_check.py` | Early sketch from the proposal stage, replaced by the two model files above. |
-| `figures/`, `paper/` | Charts and the report; empty for now. |
+| `figures/` | The charts in this README, in light and dark versions; `charts.py` redraws them from `results/`. |
+| `paper/` | The report; empty for now. |
 
 ## Setup
 
@@ -120,6 +170,11 @@ python model/placement_solver.py             # checks the solver (about 20 secon
 python experiments/offline_check.py 200      # scripted attackers, 200 runs per setting (under a minute)
 python experiments/check_setup.py            # checks the Anthropic, Google and Ollama connections, for free
 python experiments/pilot/summarize_pilot.py  # the pilot numbers above
+
+# Analyses of the saved runs, and the charts (no API key needed)
+python experiments/placement_comparison.py   # placement strategies scored with the measured numbers (a few seconds)
+python experiments/alarm_tradeoff.py         # false alarms against thefts detected, for each alarm rule
+python figures/charts.py                     # redraws the charts from those two results
 ```
 
 Honest-agent runs. Start with `--plan` (spends nothing) and `--limit 5` (a 5-run test) for any new model.
@@ -166,4 +221,4 @@ The full default run is 73 agent runs and cost about $0.20 on Claude Haiku 5.5 i
 
 - All data in AgentDojo is synthetic. The "attacker" address and the decoy contents are made up.
 - AgentDojo 0.1.35 does not work with current versions of the Anthropic library as shipped. `experiments/anthropic_compat.py` and `experiments/providers.py` fix the problems found so far, for each provider; every script that runs a model imports them first.
-- Figures explaining the project (how hijacking works, how decoys catch it, the game, the results) will be added to this README as the experiments finish.
+- Figures explaining the project (how hijacking works, how decoys catch it, the game) will be added to this README.

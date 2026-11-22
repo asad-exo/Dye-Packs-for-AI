@@ -1,0 +1,166 @@
+"""Charts for the README, slides and report, each in a light and a dark version.
+
+    python figures/charts.py
+
+Reads the results files and writes into figures/:
+  placement_loss_{light,dark}.png    expected loss against the number of decoys available, for four ways of
+                                     placing them (from results/placement_comparison.json)
+  alarm_tradeoff_{light,dark}.png    thefts detected against false alarms on honest work, for each alarm rule
+                                     and decoy setup (from results/alarm_tradeoff.json)
+"""
+from __future__ import annotations
+
+import json
+import os
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib import font_manager  # noqa: E402
+from matplotlib.lines import Line2D  # noqa: E402
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+
+THEMES = {
+    "light": dict(surface="#fcfcfb", ink="#0b0b0b", ink2="#52514e", muted="#898781", grid="#e1e0d9", axis="#c3c2b7",
+                  series=["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]),
+    "dark": dict(surface="#1a1a19", ink="#f0efec", ink2="#c3c2b7", muted="#898781", grid="#2c2c2a", axis="#383835",
+                 series=["#3987e5", "#d95926", "#199e70", "#c98500"]),
+}
+
+
+# ---------------------------------------------------------------------------------------------- shared style
+
+def style(ax, t, xgrid=False):
+    ax.set_facecolor(t["surface"])
+    for side in ("top", "right", "left"):
+        ax.spines[side].set_visible(False)
+    ax.spines["bottom"].set_color(t["axis"])
+    ax.spines["bottom"].set_linewidth(0.8)
+    ax.grid(axis="both" if xgrid else "y", color=t["grid"], linewidth=0.6, linestyle="-")
+    ax.set_axisbelow(True)
+    ax.tick_params(colors=t["muted"], labelcolor=t["ink2"], length=0, labelsize=8.5, pad=4)
+
+
+def line(ax, t, xs, ys, i, marker, z=3):
+    ax.plot(xs, ys, color=t["series"][i], linewidth=1.6, marker=marker, markersize=6, markeredgecolor=t["surface"],
+            markeredgewidth=1.0, solid_capstyle="round", zorder=z)
+
+
+def legend(fig, t, y, items):
+    """items: (series index, marker, label), in the fixed order of the series."""
+    handles = [Line2D([0], [0], color=t["series"][i], marker=m, markersize=6, linewidth=1.6,
+                      markeredgecolor=t["surface"], markeredgewidth=1.0) for i, m, _ in items]
+    fig.legend(handles, [label for _, _, label in items], loc="upper left", bbox_to_anchor=(0.055, y), ncol=len(items),
+               frameon=False, fontsize=8.5, labelcolor=t["ink2"], handlelength=2.2, columnspacing=1.6)
+
+
+def title(fig, t, main, sub, sub_y=0.905):
+    fig.text(0.055, 0.965, main, ha="left", va="top", fontsize=12, fontweight="semibold", color=t["ink"])
+    fig.text(0.055, sub_y, sub, ha="left", va="top", fontsize=9, color=t["ink2"], linespacing=1.5)
+
+
+def percent_axis(axis, ticks):
+    axis.set_ticks(ticks)
+    axis.set_ticklabels([f"{v}%" for v in ticks])
+
+
+# ---------------------------------------------------------------------------------------------- placement
+
+POLICIES = [("game", "Game-based", "o"), ("same-per-type", "Same number in every type", "s"),
+            ("random", "Random split", "^"), ("crown-jewels", "All on passwords", "D")]
+BUDGETS = list(range(10))
+
+
+def loss_chart(data, theme):
+    t = THEMES[theme]
+    fig, axes = plt.subplots(2, 2, figsize=(9, 6.4), facecolor=t["surface"], sharex=True)
+    title(fig, t, "Expected loss for each way of placing decoys",
+          "Thieves know the strategy and pick their target or stay away. Lower is better; a password leak costs 10.")
+    legend(fig, t, 0.86, [(i, m, label) for i, (_, label, m) in enumerate(POLICIES)])
+    for row, profile in enumerate(("Claude", "Qwen3")):
+        for col, (rpa, when) in enumerate((("1000", "attacks common (1 per 1,000 honest requests)"),
+                                          ("100000", "attacks rare (1 per 100,000 honest requests)"))):
+            ax = axes[row][col]
+            style(ax, t)
+            budgets = data["profiles"][profile]["budgets"][rpa]
+            for i, (key, _, marker) in reversed(list(enumerate(POLICIES))):     # game drawn last, on top
+                line(ax, t, BUDGETS, [-budgets[str(b)][key]["payoff"] for b in BUDGETS], i, marker, z=3 + (i == 0))
+            ax.set_ylim(bottom=0)
+            same = all(abs(budgets[str(b)]["game"]["payoff"] - budgets[str(b)]["same-per-type"]["payoff"]) < 1e-9 for b in BUDGETS)
+            if same:   # the orange line is hidden under the blue one: say so instead of leaving it invisible
+                ax.text(9.3, 6.5, "Same number in every type gives\nthe same result here; its line is\nhidden under the game-based one",
+                        ha="right", va="center", fontsize=8, color=t["ink2"], linespacing=1.35)
+            ax.set_title(f"{profile}, {when}", loc="left", fontsize=9, color=t["ink"], pad=6)
+            ax.set_xticks(BUDGETS)
+            if row == 1:
+                ax.set_xlabel("decoys available", fontsize=8.5, color=t["ink2"])
+            if col == 0:
+                ax.set_ylabel("expected loss", fontsize=8.5, color=t["ink2"])
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.78, bottom=0.09, hspace=0.38, wspace=0.16)
+    return fig
+
+
+# ---------------------------------------------------------------------------------------------- alarm rules
+
+SETUPS = [("k2_low", "2 low-realism decoys per type", "o"), ("k2_high", "2 high-realism decoys per type", "s"),
+          ("k4_high", "4 high-realism decoys per type", "^")]
+STRICT_TO_LOOSE = ["send_out", "leak_or_use", "act", "access", "any_sighting"]
+RULE_GROUPS = [(("send_out", "leak_or_use", "act"), "opened, used or\nsent outside", "left"),
+               (("access",), "found by\na search", "left"),
+               (("any_sighting",), "shown in a\nfile list", "center")]
+
+
+def alarm_chart(data, theme, profile="Qwen3"):
+    t = THEMES[theme]
+    cells = data["models"][profile]
+    fig, axes = plt.subplots(1, 2, figsize=(9, 5.0), facecolor=t["surface"], sharey=True)
+    title(fig, t, "Thefts detected against false alarms on honest work, for each alarm rule",
+          "Qwen3 8B, measured. Points are alarm rules, named below by what a decoy must go through to set them off;\n"
+          "stricter rules sit further left, and rules with equal results share a point. False alarms: share of 52 honest tasks.")
+    legend(fig, t, 0.80, [(i, m, label) for i, (_, label, m) in enumerate(SETUPS)])
+    for ax, (thief, name) in zip(axes, (("naive", "Naive hijacked agent"), ("aware", "Decoy-aware hijacked agent"))):
+        style(ax, t, xgrid=True)
+        thefts = [cells[s][thief]["thefts"] for s, _, _ in SETUPS]
+        for i, (s, _, marker) in reversed(list(enumerate(SETUPS))):
+            xs = [100 * cells[s]["false_alarms"][r] for r in STRICT_TO_LOOSE]
+            ys = [100 * cells[s][thief]["detected"][r] for r in STRICT_TO_LOOSE]
+            line(ax, t, xs, ys, i, marker, z=3 + (i == 0))
+        for rules, label, align in RULE_GROUPS:     # name each group of rules under its points
+            xs = [100 * cells[s]["false_alarms"][r] for s, _, _ in SETUPS for r in rules]
+            lo, hi = min(xs), max(xs)
+            ax.plot([lo, hi], [3, 3], color=t["muted"], linewidth=1.2, solid_capstyle="round", zorder=2)
+            ax.text(lo - 0.4 if align == "left" else (lo + hi) / 2, 6, label, ha=align, va="bottom", fontsize=8,
+                    color=t["ink2"], linespacing=1.3)
+        ax.set_title(f"{name} ({min(thefts)}-{max(thefts)} thefts per setup)", loc="left", fontsize=9, color=t["ink"], pad=6)
+        ax.set_xlim(-1.5, 28)
+        ax.set_ylim(0, 103)
+        percent_axis(ax.xaxis, range(0, 26, 5))
+        percent_axis(ax.yaxis, range(0, 101, 20))
+        ax.set_xlabel("honest tasks that set off the alarm", fontsize=8.5, color=t["ink2"])
+    axes[0].set_ylabel("thefts detected", fontsize=8.5, color=t["ink2"])
+    axes[1].tick_params(labelleft=False)
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.70, bottom=0.11, wspace=0.08)
+    return fig
+
+
+# ---------------------------------------------------------------------------------------------- main
+
+def main():
+    installed = {f.name for f in font_manager.fontManager.ttflist}      # the first of these that is installed
+    plt.rcParams["font.family"] = next(f for f in ("Inter", "Segoe UI", "DejaVu Sans") if f in installed)
+    charts = [("placement_loss", "placement_comparison.json", loss_chart), ("alarm_tradeoff", "alarm_tradeoff.json", alarm_chart)]
+    for name, source, make in charts:
+        data = json.load(open(os.path.join(ROOT, "results", source), encoding="utf-8"))
+        for theme in THEMES:
+            fig = make(data, theme)
+            path = os.path.join(HERE, f"{name}_{theme}.png")
+            fig.savefig(path, dpi=200, facecolor=fig.get_facecolor())
+            plt.close(fig)
+            print("saved", os.path.relpath(path, ROOT))
+
+
+if __name__ == "__main__":
+    main()

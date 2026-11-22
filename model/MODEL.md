@@ -59,7 +59,7 @@ Three findings do not fit Part A. Each comes from runs with real AI agents (`res
 
 1. **The cost of decoys switches on; it does not grow with each decoy.** With 1, 2 or 4 decoys per type, honest agents ran into them about equally often: an honest search either goes near the password files or it does not. So protecting a type of file has a **fixed cost**, plus only a small extra per decoy. (The weakest agent, Qwen3, did get somewhat worse with more decoys: its right answers went from 100% to 83% to 78% at 1, 2 and 4 decoys per type. So the per-decoy cost is small, not zero.)
 2. **Decoys also cost honest work through confusion, not only through alarms.** Decoys hold different values from the real file. When a request did not name the file, the agent gave the right answer in 86-96% of runs instead of 100%. With the alarm that fires only when a decoy is sent outside the company, honest agents caused no false alarms at all (0 of 1,094 runs), so most of the cost is confusion.
-3. **Hijacked agents often take everything at once.** A plain hijacked agent usually emailed every matching file in one message (Claude: 20 of 20 times it sent anything; Qwen3: 63 of 81 runs). The decoys in that message set off the alarm, but the real secret left with them: **detected, not prevented.** A decoy-aware agent sent a single file. Against realistic decoys it still picked a decoy about half the time (a blind pick would hit one 50-67% of the time), so it saw through few of them.
+3. **Hijacked agents often take everything at once.** A naive hijacked agent (one whose instructions do not mention decoys) usually emailed every matching file in one message (Claude: 20 of 20 times it sent anything; Qwen3: 63 of 81 runs). The decoys in that message set off the alarm, but the real secret left with them: **detected, not prevented.** A decoy-aware agent sent a single file. Against realistic decoys it still picked a decoy about half the time (a blind pick would hit one 50-67% of the time), so it saw through few of them.
 
 ## 3. The model, as measured
 
@@ -100,6 +100,8 @@ This is a Stackelberg security game in which decoy share plays the role of "cove
 
 **How it is solved.** For each set of protected types (8 sets for 3 types) and each combination of the thieves' choices (including not attacking), solve one linear program: maximize the defender's expected payoff, minus the protection costs, subject to every kind of thief really preferring its choice. Keep the best. This is the multiple-LP method of Conitzer and Sandholm (2006), run once per protected set. It is exact, and at this size it takes seconds. The code checks it against the one-type formulas of Part A and against a brute-force grid search on 40 random games.
 
+`experiments/placement_comparison.py` uses the same payoffs to compare the game's placements with simpler ones (the same number of decoys in every type, a random split, all on passwords), with the numbers the runs measured. The results are in the main README.
+
 ## 5. From shares to decoys
 
 If a type has n real files, a decoy share q needs k = q·n / (1 − q) decoys. With only two real files per type this rounding is coarse (0, 1 or 2 decoys), so the experiments either use more real files per type or randomize the rounding.
@@ -108,9 +110,9 @@ If a type has n real files, a decoy share q needs k = q·n / (1 − q) decoys. W
 
 | Quantity | Status |
 |---|---|
-| V, C, L, G | Chosen for illustration; results are reported across a range of values |
+| V, C, L, G | Chosen for illustration; the placement comparison changes them one at a time |
 | K_t, the fixed cost of protecting a type | **Measured** per request: no cost when the request names the file; right answer 86-96% instead of 100% when it does not. How often honest work looks for each type is assumed and varied |
 | h_t, the extra cost per decoy | **Measured** small (larger for the weakest agent) |
-| Share of grab-everything thieves | **Measured** on hijacked agents: most plain hijacked agents sent everything at once |
-| e, decoys a decoy-aware thief recognizes | **Measured**: Qwen3 picked a decoy 31% of the time against low-realism decoys (a blind pick: 50%), and about half the time against high-realism ones (a blind pick: 50-67%) |
-| Mix of thief kinds | Assumed; varied in a sensitivity check |
+| Share of grab-everything thieves | **Measured** on hijacked agents: most naive hijacked agents sent everything at once |
+| e, decoys a decoy-aware thief recognizes | **Measured**: Qwen3 picked a decoy 31% of the time against low-realism decoys (a blind pick: 50%), and about half the time against high-realism ones (a blind pick: 50-67%), so e is about 10% for high realism. Claude: about half, but from only 6 single-file sends |
+| Mix of thief kinds | Assumed (70% naive, 30% decoy-aware); the placement comparison also tries 50% and 90% naive |
