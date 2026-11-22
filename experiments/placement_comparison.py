@@ -56,6 +56,8 @@ HURT_COST = 0.1                               # cost of one hurt honest request,
 REQUESTS_PER_ATTACK = [100, 1_000, 10_000, 100_000]
 BUDGETS = range(0, 10)
 PROFILES = {"Claude": ("claude-haiku-5-5", "claude-haiku-5-5"), "Qwen3": ("qwen3-8b", "qwen3-8b")}
+FIT_SETTINGS = ("k2_low", "k2_high", "k4_high")   # the thief numbers come from these runs only, never from the
+                                                  # validation runs (experiments/validation.py)
 
 
 # ---------------------------------------------------------------------------------------------- measured inputs
@@ -87,7 +89,7 @@ def _sent(r):
 
 def thief_inputs(model_file: str) -> dict:
     recs = [json.loads(line) for line in open(os.path.join(ROOT, "results", "hijack", model_file + ".jsonl"), encoding="utf-8") if line.strip()]
-    d = [r for r in recs if r["mode"] == "direct" and r["error"] is None and r["setting"] != "real_only"]
+    d = [r for r in recs if r["mode"] == "direct" and r["error"] is None and r["setting"] in FIT_SETTINGS]
     naive = [r for r in d if not r["aware"] and _sent(r)]
     single = [r for r in d if r["aware"] and r["setting"] in ("k2_high", "k4_high") and len(_sent(r)) == 1]
     share = {"k2_high": 2 / 4, "k4_high": 4 / 6}

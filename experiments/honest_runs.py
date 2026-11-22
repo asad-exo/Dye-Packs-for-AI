@@ -74,6 +74,10 @@ SETTINGS: dict[str, object] = {"pristine": None, "real_only": none_policy()}
 for _k in DECOY_COUNTS:
     for _r in REALISM_LEVELS:
         SETTINGS[f"k{_k}_{_r}"] = counts_policy({c: _k for c in CLASS_KEYS}, realism=_r, name=f"k{_k}_{_r}")
+STANDARD_SETTINGS = list(SETTINGS)       # what --settings all runs
+# The placement the game recommends for Qwen3 (experiments/placement_comparison.py): 2 password decoys and 1 in
+# each other type. Run only when named, to test the model's prediction on fresh data (experiments/validation.py).
+SETTINGS["game_qwen3"] = counts_policy({"credentials": 2, "customer_data": 1, "financial": 1}, realism="high", name="game_qwen3")
 
 # Average tokens per normal-task run in the October pilot (Claude Haiku 5.5), for cost estimates only.
 PILOT_TOKENS_PER_RUN = {"in": 23_250, "out": 710, "calls": 1}
@@ -382,7 +386,7 @@ def main(argv=None):
 
     if args.summary:
         return summarize(args)
-    names = list(SETTINGS) if args.settings == "all" else args.settings.split(",")
+    names = list(STANDARD_SETTINGS) if args.settings == "all" else args.settings.split(",")
     unknown = [s for s in names if s not in SETTINGS]
     if unknown:
         raise SystemExit(f"unknown settings {unknown}; choose from {list(SETTINGS)}")

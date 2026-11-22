@@ -114,5 +114,5 @@ If a type has n real files, a decoy share q needs k = q·n / (1 − q) decoys. W
 | K_t, the fixed cost of protecting a type | **Measured** per request: no cost when the request names the file; right answer 86-96% instead of 100% when it does not. How often honest work looks for each type is assumed and varied |
 | h_t, the extra cost per decoy | **Measured** small (larger for the weakest agent) |
 | Share of grab-everything thieves | **Measured** on hijacked agents: most naive hijacked agents sent everything at once |
-| e, decoys a decoy-aware thief recognizes | **Measured**: Qwen3 picked a decoy 31% of the time against low-realism decoys (a blind pick: 50%), and about half the time against high-realism ones (a blind pick: 50-67%), so e is about 10% for high realism. Claude: about half, but from only 6 single-file sends |
+| e, decoys a decoy-aware thief recognizes | **Measured**: Qwen3 picked a decoy 31% of the time against low-realism decoys (a blind pick: 50%), and about half the time against high-realism ones (a blind pick: 50-67%), so e is about 10% for high realism. Claude: none (it picked a decoy in 33 of 56 single-file sends, where a blind pick would hit about 31) |
 | Mix of thief kinds | Assumed (70% naive, 30% decoy-aware); the placement comparison also tries 50% and 90% naive |
