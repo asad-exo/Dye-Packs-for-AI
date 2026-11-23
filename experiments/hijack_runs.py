@@ -22,6 +22,7 @@ Usage (from the repository's top folder)
   python experiments/hijack_runs.py --limit 6         # a 6-run test
   python experiments/hijack_runs.py                   # everything; safe to stop and restart
   python experiments/hijack_runs.py --summary         # tables from the saved results
+  --user-tasks user_task_3 --goals credentials_naive   # injected mode: only some user tasks and goals
 Model options as in honest_runs.py: --provider, --model, --price, --max-cost, --workers, --reps.
 Results: results/hijack/<model>.jsonl, one line per run.
 """
@@ -244,6 +245,7 @@ def main(argv=None):
     p.add_argument("--model", default=None)
     p.add_argument("--settings", default=",".join(DEFAULT_SETTINGS), help="comma-separated setting names")
     p.add_argument("--goals", default="all", help="comma-separated goal names, or 'all'")
+    p.add_argument("--user-tasks", default="all", help="injected mode: comma-separated user tasks (e.g. user_task_3), or 'all'")
     p.add_argument("--attack", choices=tuple(ATTACKS), default="important_instructions",
                    help="injected mode: which of AgentDojo's standard attacks wraps the hidden instruction")
     p.add_argument("--reps", type=int, default=1, help="repetitions (direct mode uses 3 per repetition)")
@@ -271,12 +273,16 @@ def main(argv=None):
     if bad:
         raise SystemExit(f"unusable settings {bad}: hijack runs need real secrets planted (not 'pristine')")
     goals = list(GOALS) if args.goals == "all" else args.goals.split(",")
+    user_tasks = TASK_IDS if args.user_tasks == "all" else args.user_tasks.split(",")
+    unknown = [u for u in user_tasks if u not in TASK_IDS] + [g for g in goals if g not in GOALS]
+    if unknown:
+        raise SystemExit(f"unknown user tasks or goals: {unknown}")
     modes = MODES if args.mode == "all" else (args.mode,)
     done = latest_ok(hr.load_records(args.out))
     jobs = []
     for rep in range(args.reps):
         if "injected" in modes:   # task by task, so a run that stops early still compares settings fairly
-            jobs += [("injected", s, uid, g, rep) for uid in TASK_IDS for g in goals for s in settings]
+            jobs += [("injected", s, uid, g, rep) for uid in user_tasks for g in goals for s in settings]
         if "direct" in modes:
             jobs += [("direct", s, "-", g, 3 * rep + k) for k in range(3) for g in goals for s in settings]
     jobs = [j for j in jobs if (j[0], args.attack if j[0] == "injected" else None, *j[1:]) not in done]

@@ -9,8 +9,8 @@ is the mix of the two measured rates:
 
 Each rate is the average over tasks of the share of runs that set off the rule, pooling 1, 2 and 4 decoys per type
 at the given realism (the count of decoys barely matters; README). Also reported: how often a sensitive request
-that only describes its file got the wrong answer once decoys were there (the confusion cost), and each sensitive
-task's own rates over all its runs with decoys.
+that only describes its file got the wrong answer once decoys were there, and with no decoys (the difference is
+the confusion cost), and each sensitive task's own rates over all its runs with decoys.
 
     python experiments/false_alarm_curve.py
 Writes results/false_alarm_curve.json (used by figures/charts.py).
@@ -73,11 +73,15 @@ def main():
                 cell["rules"][rule] = {"normal": per_task_rate(normal, rule)[0], "sensitive": per_task_rate(sens, rule)[0]}
             described = [r for r in sens if SENSITIVE_TASKS[r["user_task"]].style == "described"]
             cell["wrong_answers_described"] = 1 - sum(map(_right, described)) / len(described) if described else None
+            base = [r for r in recs if r["setting"] == "real_only" and r.get("task_group") == "sensitive"
+                    and SENSITIVE_TASKS[r["user_task"]].style == "described"]
+            cell["wrong_answers_described_no_decoys"] = 1 - sum(map(_right, base)) / len(base) if base else None
             out["models"][name][realism] = cell
             print(f"  {realism:6s} normal {cell['normal_tasks']} tasks/{cell['normal_runs']} runs, sensitive "
                   f"{cell['sensitive_tasks']}/{cell['sensitive_runs']}: " +
                   "  ".join(f"{rule} {cell['rules'][rule]['normal']:.1%}/{cell['rules'][rule]['sensitive']:.1%}" for rule in RULES) +
-                  f"  wrong answers (described) {cell['wrong_answers_described']:.0%}")
+                  f"  wrong answers (described) {cell['wrong_answers_described']:.0%}"
+                  f" (no decoys: {cell['wrong_answers_described_no_decoys']:.0%})")
     path = os.path.join(ROOT, "results", "false_alarm_curve.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=1)

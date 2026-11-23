@@ -125,7 +125,8 @@ def alarm_chart(data, theme, profile="Qwen3"):
     fig, axes = plt.subplots(1, 2, figsize=(9, 5.0), facecolor=t["surface"], sharey=True)
     title(fig, t, "Thefts detected against false alarms on honest work, for each alarm rule",
           "Qwen3 8B, measured. Points are alarm rules, named below by what a decoy must go through to set them off;\n"
-          "stricter rules sit further left, and rules with equal results share a point. False alarms: share of 52 honest tasks.")
+          "stricter rules sit further left, and rules with equal results share a point. False alarms: share of "
+          f"{cells[SETUPS[0][0]]['honest_tasks']} honest tasks.")
     legend(fig, t, 0.80, [(i, m, label) for i, (_, label, m) in enumerate(SETUPS)])
     for ax, (thief, name) in zip(axes, (("naive", "Naive hijacked agent"), ("aware", "Decoy-aware hijacked agent"))):
         style(ax, t, xgrid=True)
@@ -141,9 +142,10 @@ def alarm_chart(data, theme, profile="Qwen3"):
             ax.text(lo - 0.4 if align == "left" else (lo + hi) / 2, 6, label, ha=align, va="bottom", fontsize=8,
                     color=t["ink2"], linespacing=1.3)
         ax.set_title(f"{name} ({min(thefts)}-{max(thefts)} thefts per setup)", loc="left", fontsize=9, color=t["ink"], pad=6)
-        ax.set_xlim(-1.5, 28)
+        top = max(100 * cells[s]["false_alarms"][r] for s, _, _ in SETUPS for r in STRICT_TO_LOOSE)
+        ax.set_xlim(-1.5, 5 * (top // 5) + 6.5)     # room for the loosest rule's points and label
         ax.set_ylim(0, 103)
-        percent_axis(ax.xaxis, range(0, 26, 5))
+        percent_axis(ax.xaxis, range(0, int(5 * (top // 5)) + 6, 5))
         percent_axis(ax.yaxis, range(0, 101, 20))
         ax.set_xlabel("honest tasks that set off the alarm", fontsize=8.5, color=t["ink2"])
     axes[0].set_ylabel("thefts detected", fontsize=8.5, color=t["ink2"])
