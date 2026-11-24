@@ -12,6 +12,9 @@ at the given realism (the count of decoys barely matters; README). Also reported
 that only describes its file got the wrong answer once decoys were there, and with no decoys (the difference is
 the confusion cost), and each sensitive task's own rates over all its runs with decoys.
 
+The 95% band around each line comes from a bootstrap over tasks: normal and sensitive tasks are each drawn with
+replacement (2,000 times), and the mix is recomputed at every share f.
+
     python experiments/false_alarm_curve.py
 Writes results/false_alarm_curve.json (used by figures/charts.py).
 """
@@ -22,6 +25,8 @@ import os
 import sys
 import warnings
 from collections import defaultdict
+
+import numpy as np
 
 warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -37,11 +42,31 @@ REALISM = ["low", "medium", "high"]
 MODELS = {"Claude": "claude-haiku-5-5", "Qwen3": "qwen3-8b"}
 
 
-def per_task_rate(rows, rule):
+BOOT = 2000
+SHARES = [i / 100 for i in range(101)]
+
+
+def per_task(rows, rule) -> list[float]:
     by = defaultdict(list)
     for r in rows:
         by[r["user_task"]].append(r["alarm"][rule])
-    return (sum(sum(v) / len(v) for v in by.values()) / len(by)) if by else None, len(by)
+    return [sum(v) / len(v) for v in by.values()]
+
+
+def per_task_rate(rows, rule):
+    rates = per_task(rows, rule)
+    return (sum(rates) / len(rates)) if rates else None, len(rates)
+
+
+def band(normal: list[float], sensitive: list[float], seed: int) -> dict:
+    """95% bootstrap band of the mixed rate at each share f of sensitive tasks."""
+    rng = np.random.default_rng(seed)
+    a, b = np.asarray(normal), np.asarray(sensitive)
+    na = a[rng.integers(0, len(a), size=(BOOT, len(a)))].mean(axis=1)
+    nb = b[rng.integers(0, len(b), size=(BOOT, len(b)))].mean(axis=1)
+    mix = np.outer(na, [1 - f for f in SHARES]) + np.outer(nb, SHARES)
+    lo, hi = np.percentile(mix, [2.5, 97.5], axis=0)
+    return {"lo": [round(float(v), 5) for v in lo], "hi": [round(float(v), 5) for v in hi]}
 
 
 def main():
@@ -69,8 +94,9 @@ def main():
                 continue
             cell = {"normal_tasks": len({r["user_task"] for r in normal}), "normal_runs": len(normal),
                     "sensitive_tasks": len({r["user_task"] for r in sens}), "sensitive_runs": len(sens), "rules": {}}
-            for rule in RULES:
-                cell["rules"][rule] = {"normal": per_task_rate(normal, rule)[0], "sensitive": per_task_rate(sens, rule)[0]}
+            for i, rule in enumerate(RULES):
+                cell["rules"][rule] = {"normal": per_task_rate(normal, rule)[0], "sensitive": per_task_rate(sens, rule)[0],
+                                       "band": band(per_task(normal, rule), per_task(sens, rule), seed=i)}
             described = [r for r in sens if SENSITIVE_TASKS[r["user_task"]].style == "described"]
             cell["wrong_answers_described"] = 1 - sum(map(_right, described)) / len(described) if described else None
             base = [r for r in recs if r["setting"] == "real_only" and r.get("task_group") == "sensitive"

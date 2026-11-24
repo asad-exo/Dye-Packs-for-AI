@@ -2,6 +2,8 @@
 
 This is the model behind the project, written so it can be explained at a whiteboard. Part A is the simple model from the proposal. Part B is the model after the experiments: what they measured, and how that changes the game. Code that checks every claim: `simple_model.py` (Part A) and `placement_solver.py` (Part B).
 
+**Threat model.** The game starts after a successful hijack: the attacker's instructions have reached the agent, and the agent follows them. This is the worst case for the defender. Filters that block hidden instructions are the first line of defense; decoys are the second, for the attacks that get through. So the thief below is the compromised agent itself, and its payoffs describe what it gains by stealing once it is hijacked, not how often hijacks happen. The experiments measure that thief by giving the agent the attacker's instructions outright (direct mode), and check against 115 real hijacks of Qwen3 that a really hijacked agent behaves the same way (main README).
+
 # Part A: the simple model
 
 ## 1. One kind of file
@@ -59,7 +61,7 @@ Three findings do not fit Part A. Each comes from runs with real AI agents (`res
 
 1. **The cost of decoys switches on; it does not grow with each decoy.** With 1, 2 or 4 decoys per type, honest agents ran into them about equally often: an honest search either goes near the password files or it does not. So protecting a type of file has a **fixed cost**, plus only a small extra per decoy. (The weakest agent, Qwen3, did get somewhat worse with more decoys: its right answers went from 100% to 83% to 78% at 1, 2 and 4 decoys per type. So the per-decoy cost is small, not zero.)
 2. **Decoys also cost honest work through confusion, not only through alarms.** Decoys hold different values from the real file. When a request did not name the file, the agent gave the right answer in 86-96% of runs instead of 100%. With the alarm that fires only when a decoy is sent outside the company, honest agents caused no false alarms at all (0 of 2,250 runs), so most of the cost is confusion.
-3. **Hijacked agents often take everything at once.** A naive hijacked agent (one whose instructions do not mention decoys) usually emailed every matching file in one message (Claude: 20 of 20 times it sent anything; Qwen3: 133 of 162 runs). The decoys in that message set off the alarm, but the real secret left with them: **detected, not prevented.** A decoy-aware agent sent a single file. Against realistic decoys it still picked a decoy about half the time (a blind pick would hit one 50-67% of the time), so it saw through few of them.
+3. **Hijacked agents often take everything at once.** A naive hijacked agent (one whose instructions do not mention decoys) usually emailed every matching file in one message (Claude: 20 of 20 times it sent anything; Qwen3: 133 of 162 runs). The decoys in that message set off the alarm, but the real secret left with them: **detected, not prevented**, by a monitor that only records. The alarm is raised before the message goes out, though: it came on that same message, or an earlier one, in 87% of Qwen3's naive thefts in direct mode and 91% of its real hijacks, and after a real secret had left in at most 2%. So a monitor that blocks the message would prevent the leak too. The game below keeps the cautious assumption that the monitor only records. A decoy-aware agent sent a single file. Against realistic decoys it still picked a decoy about half the time (a blind pick would hit one 50-67% of the time), so it saw through few of them.
 
 ## 3. The model, as measured
 
@@ -80,7 +82,7 @@ e is the share of decoys the thief can recognize: 0 for a naive thief, more for 
 
 **Result 3 (protect or not).** With a fixed cost, the real decision is *which types of file to protect*. For a protected type, the best share is still the smallest one that does the job: the type's q\* (raised to make up for what decoy-aware thieves see through), or the cap when many thieves attack regardless. Protect a type only if what protection saves, in attacks deterred or caught, is worth more than its fixed cost K_t.
 
-**Result 4 (grab-everything thieves).** One decoy in a type is enough to detect every grab-everything thief that targets it; more decoys add nothing against them. Detection does not stop the leak. It deters such a thief only if being caught costs it more than the secret is worth (C > V). Otherwise decoys turn a silent theft into a detected one.
+**Result 4 (grab-everything thieves).** One decoy in a type is enough to detect every grab-everything thief that targets it; more decoys add nothing against them. Detection does not stop the leak. It deters such a thief only if being caught costs it more than the secret is worth (C > V). Otherwise decoys turn a silent theft into a detected one. (With a monitor that blocks the message instead of only recording it, the thief's payoff in a protected type becomes −C instead of V − C, so a single decoy deters it whenever being caught costs it anything. The runs support this case, since the alarm comes before the message is sent; the results here keep the cautious, recording-only assumption.)
 
 **Result 5 (thieves go where the decoys are not).** Protecting one type pushes thieves to the types left open. So all types must be decided together, and protecting only some types can be pointless.
 
@@ -116,5 +118,7 @@ If a type has n real files, a decoy share q needs k = q·n / (1 − q) decoys. W
 | Share of grab-everything thieves | **Measured** on hijacked agents: most naive hijacked agents sent everything at once |
 | e, decoys a decoy-aware thief recognizes | **Measured**: Qwen3 picked a decoy 26% of the time against low-realism decoys (a blind pick: 50%), and 46-59% of the time against high-realism ones (a blind pick: 50-67%), so e is about 10% for high realism. Claude: none (it picked a decoy in 33 of 56 single-file sends, where a blind pick would hit about 31) |
 | Mix of thief kinds | Assumed (70% naive, 30% decoy-aware); the placement comparison also tries 50% and 90% naive |
+| The thief is a compromised agent | Assumed (the threat model above): measured in direct mode, and checked against 115 real hijacks of Qwen3, which matched direct mode on every measure: differences of 7 points or less, none significant (main README) |
+| Uncertainty from the runs | Every measured input is resampled (1,000 bootstrap resamples of the runs) and the game solved again; the main README gives the resulting 95% intervals and how often the game's choice stayed the same |
 
 Two tests on fresh data (`experiments/validation.py`) checked the measured model: for each of Claude and Qwen3, the placement the game recommends was run for the first time, with the prediction written down beforehand. Both predictions fell inside the 95% intervals of what was measured; the numbers are in the main README.

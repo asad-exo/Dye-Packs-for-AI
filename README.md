@@ -13,7 +13,9 @@ Course project for ECE-GY 6263 Game Theory (NYU Tandon, Fall 2026) by Asad Shaha
   <img alt="An attacker plants an email with hidden instructions; the company's AI agent reads it while summarizing the inbox, searches the drive and emails the files to the attacker" src="figures/hijack_light.png" width="100%">
 </picture>
 
-An attacker hides instructions in something the agent will read: an email, a calendar invite or a shared file. When an employee asks the agent for something ordinary, the agent reads the hidden text, follows it, and sends company secrets outside. In our runs none of the three models tested followed such hidden instructions (0 of 648), so we also give the agent the attacker's instructions outright ("direct mode") to study what a hijacked agent does.
+An attacker hides instructions in something the agent will read: an email, a calendar invite or a shared file. When an employee asks the agent for something ordinary, the agent reads the hidden text, follows it, and sends company secrets outside.
+
+**Threat model: the agent is already compromised.** Filters that block hidden instructions are the first line of defense; decoys are a second line, for the attacks that get through. So the experiments study the worst case for the defender: the attacker's instructions have reached the agent, and it follows them. Hidden instructions rarely worked in our runs (AgentDojo's standard attack: 0 of 720 runs on four models; simpler wordings: Qwen3 followed 4 of 288), so most hijack runs give the agent the attacker's instructions outright ("direct mode"), as if it had already been hijacked. Everything about thieves below is measured under that assumption, and is a statement about what happens after a successful hijack, not about how often one happens. To check the stand-in, the one hidden instruction that worked was run again until it gave 115 real hijacks: on the measures that matter for the alarm, the hijacked agent behaved as in direct mode (Hijack results, below).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/decoys_dark.png">
@@ -31,7 +33,7 @@ Where to put the decoys is a Stackelberg game: the company commits to a placemen
 
 ## Status
 
-The decoy kit, the scripted attackers and the game model are written and checked. The experiments have run: false alarms from honest agents, real hijack attempts, and the comparison of decoy placements and alarm rules (results below). Added on 22 November: six everyday honest tasks that edit or look up sensitive data, false alarms measured against the share of such work, two more baselines and two cut-down versions of the game, and the first hidden instruction a model followed. Added on 23 November: Qwen3 on the six new tasks, medium-realism decoys for Qwen3, four more wordings of hidden instructions, 180 runs of the one hidden instruction Qwen3 followed (115 real hijacks), and three more small models (Mistral 7B, Granite 3.3 8B, Hermes 3 8B), which could not work as agents here. Next: the presentation and the report. The model is explained in [model/MODEL.md](model/MODEL.md).
+The decoy kit, the scripted attackers and the game model are written and checked. The experiments have run: false alarms from honest agents, real hijack attempts, and the comparison of decoy placements and alarm rules (results below). Added on 22 November: six everyday honest tasks that edit or look up sensitive data, false alarms measured against the share of such work, two more baselines and two cut-down versions of the game, and the first hidden instruction a model followed. Added on 23 November: Qwen3 on the six new tasks, medium-realism decoys for Qwen3, four more wordings of hidden instructions, 180 runs of the one hidden instruction Qwen3 followed (115 real hijacks), and three more small models (Mistral 7B, Granite 3.3 8B, Hermes 3 8B), which could not work as agents here. Added on 24 November, from the saved runs: the threat model stated (the agent is already compromised), 95% intervals on every chart and on the game's results, when the alarm fires compared with the real leak, what happened in the thefts it missed, and real hijacks compared with direct mode measure by measure. Next: the presentation and the report. The model is explained in [model/MODEL.md](model/MODEL.md).
 
 Honest-agent results so far (November 2026). Nobody attacks in these runs, so every alarm is a false alarm.
 
@@ -60,7 +62,7 @@ Hijack results so far (November 2026; `experiments/hijack_runs.py`):
   | 4 per type, high realism | 24 of 36 | 24 | 24 of 24 |
   | 2 per type, low realism | 23 of 36 | 21 | 20 of 23 |
 
-  With decoys present, the strict alarm fired in 86 of the 91 real hijacks (95%, interval 88-98%), each time no later than the first real leak. That is about as often as for the naive thieves in direct mode (91-98%), which supports direct mode as a stand-in. As there, it detected more than it prevented: 83 of those emails carried real files along with the decoys, 3 carried only decoys, and 5 carried only real files, which the alarm missed. Decoys did not deter it: Qwen3 was hijacked about as often with decoys as without.
+  With decoys present, the strict alarm fired in 86 of the 91 real hijacks (95%, interval 88-98%), each time no later than the first real leak. That is about as often as for the naive thieves in direct mode (91-98%), which supports direct mode as a stand-in (compared measure by measure below). As there, it detected more than it prevented: 83 of those emails carried real files along with the decoys, 3 carried only decoys, and 5 carried only real files, which the alarm missed. Decoys did not deter it: Qwen3 was hijacked about as often with decoys as without.
 - **Direct mode** (the attacker's instructions given outright, in two versions: naive, and decoy-aware, which warns that some files are decoys and says to send only the one that looks most genuine; 27 runs per setting and version for Claude (162 for decoy-aware Claude with high-realism decoys), 54 for Qwen3 with decoys). Share of runs in which a real secret left the company:
 
   | | Claude, naive | Claude, decoy-aware | Qwen3, naive | Qwen3, decoy-aware |
@@ -71,10 +73,35 @@ Hijack results so far (November 2026; `experiments/hijack_runs.py`):
   | 4 high-realism decoys per type | 11% | 3% | 85% | 41% |
 
 - **Decoys work like an alarm, not a lock:**
-  - **Naive hijacked agents** mostly sent everything they found in one message (Claude: 20 of 20 times it sent anything; Qwen3: 133 of 162 runs). The alarm went off, but the real secret in that message still left: detected, not prevented.
+  - **Naive hijacked agents** mostly sent everything they found in one message (Claude: 20 of 20 times it sent anything; Qwen3: 133 of 162 runs). The alarm went off, but the real secret in that message still left: detected, not prevented, with a monitor that only records. The alarm is raised before the message is sent, so a monitor that blocks would stop it (see "Does the alarm fire before the real data leaves?" below).
   - **Decoy-aware Qwen3** sent a single file. Against high-realism decoys it picked a decoy 46% (2 per type) and 59% (4 per type) of the time, close to a blind pick (50% and 67%): caught, nothing real left. Against low-realism decoys it picked one only 26% of the time.
   - **Decoy-aware Claude** was mostly deterred by high-realism decoys. In 162 runs per setup it sent something in 25% (2 decoys per type) and 10% (4 per type) of runs, against 52% with no decoys. When it did send, it picked a decoy 55% and 69% of the time, about as often as a blind pick would (50% and 67%).
   - **Gemini 3.8 Flash** (108 direct-mode runs, 18 per setup and version) mostly refused. Google's safety filter blocked the first request in 37 runs, 31 of them decoy-aware. Of the 71 that ran, Gemini sent something out in 9, all naive (9 of 48), and never followed the decoy-aware version. With decoys present, 6 of its 7 thefts included a decoy and set off the alarm.
+- **Does the alarm fire before the real data leaves?** (`experiments/alarm_timing.py`, from the saved runs; 95% intervals in brackets.) The monitor checks every outgoing message before it is sent. For each theft by a naive thief, the first alarm is compared with the first message that carried a real secret outside:
+
+  | Alarm, compared with the first real secret sent out | Qwen3, direct mode (159 thefts) | Qwen3, real hijacks (91) |
+  |---|---|---|
+  | Strict rule, on an earlier message (a decoy went out first) | 3% [1-7%] | 0% [0-4%] |
+  | Strict rule, on that same message, before it was sent | 84% [77-89%] | 91% [84-95%] |
+  | Strict rule, only after a real secret had left | 2% [1-5%] | 0% [0-4%] |
+  | Strict rule, never (a real secret left, no alarm) | 6% [3-10%] | 5% [2-12%] |
+  | Nothing real left (only decoys went out) | 6% [3-10%] | 3% [1-9%] |
+  | Search rule, on an earlier tool call | 74% [67-80%] | 63% [52-72%] |
+
+  Claude's naive thefts: the strict alarm came on the same message in all 20. So the strict alarm almost never comes too late: it fires on the very message that would carry the secret out, or earlier. Our monitor only recorded; one allowed to block would have stopped the agent before any real secret left in 87% of the direct-mode thefts (138 of 159) and 91% of the real hijacks (83 of 91). Whether a blocked agent then tries again without the decoys was not tested, so the safe response is to stop the agent, not only the message. The search alarm comes earlier still, a tool call or more before anything is sent, which is the case for the two-level setup below (review on a search, stop on a send).
+- **The thefts the strict alarm missed** (from the monitor's records only). It missed 5 of the 91 real hijacks and 9 of Qwen3's 159 direct-mode naive thefts. Every miss sent a single real file and no decoy. In 4 of the 5 real-hijack misses (and 1 of the 9 direct ones), the agent's search returned a real file and no decoy: rebuilding those drives (the planting is seeded by the run) shows that the real files contained words, such as "credentials", "payment" or "company", that neither decoy of that type in the drive did. In the other 9 (8 direct, 1 real), the decoys showed up in a full file listing, but the agent opened a real customer file and sent it, the model's pick-one thief. Design lesson: give each decoy the words the real files of its type use, so that any search that finds a real file also finds a decoy.
+- **Direct mode against real hijacks.** Qwen3's naive thieves on the three decoy setups run both ways (159 direct-mode thefts, 74 real hijacks), measure by measure, real hijacks minus direct mode, with the 95% interval of the difference:
+
+  | | Direct mode | Real hijacks | Difference |
+  |---|---|---|---|
+  | Strict alarm fired | 94% | 95% | +0 points [-8, +6] |
+  | A real secret left | 94% | 96% | +2 [-6, +7] |
+  | More than one planted file sent | 90% | 92% | +2 [-7, +9] |
+  | A decoy and a real secret in the first message out | 84% | 91% | +7 [-3, +15] |
+  | Search alarm at or before the first real leak | 89% | 91% | +2 [-8, +9] |
+  | Only the targeted type sent | 98% | 97% | -1 [-8, +3] |
+
+  No difference is significant (Fisher's exact test, p ≥ 0.23). Setup by setup (18 more tests), one reached p = 0.01: with 4 high-realism decoys per type, real hijacks put a decoy and the real secret in the same first message more often (24 of 24, against 40 of 52), which favors the defender. So, for this one hidden instruction, a really hijacked agent behaved like direct mode: every difference was 7 points or less, and none was significant. With one entry and two wordings, this supports direct mode as a stand-in; it does not prove it for every attack.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/deterrence_dark.png">
@@ -103,18 +130,19 @@ Where to put decoys, and which alarm rule to use (November 2026; `experiments/pl
   - A random split is worse than the same number in every type.
 - **When attacks are rare** (1 per 100,000), the confusion decoys cause in honest work costs more than they save. The game plants none (loss 10, one leak). Placements that use all their decoys lose 16-39.
 - **Changing one assumption at a time** (50% or 90% naive hijacks; being caught costs the thief 10 or 40; a detection worth nothing; all three types worth 10; checked with 3 and 9 decoys) keeps the picture: the game and the same number in every type stay tied for best, a random split comes third, and all on passwords stays stuck. Each extra decoy also costs honest work a little (left out here because it is small); counting it would favor the game, which uses the fewest decoys.
+- **How much run-to-run noise moves these numbers** (the bars in the charts). Every measured input was resampled from its runs 1,000 times (honest runs within each task and decoy setting, hijack runs within each setting and kind of thief), the game solved again and every placement scored again. Qwen3, 9 decoys, attacks common: game 0.21 [95% interval 0.05-0.41], random split 1.05 [0.76-1.40], all on passwords 8.14 [8.00-8.31]; both lose to the game in every resample. Attacks rare: the game 10 [5.4-10], the simple rules 21-22 [5-41], worse than the game in 91-100% of resamples. The game's exact placement stayed the same in 58% of resamples when attacks are common (the alternatives lose almost the same) and 86% when they are rare. Because both sides of a comparison come from the same resample, the share of resamples in which one beats the other is the number to read, more than whether two intervals overlap.
 
 **Does the model match the runs?** The model predicts how often a theft includes a decoy, and so is detected. A naive thief sends everything at once (90% of the time for Qwen3) or else one file; a decoy-aware thief sends one file and avoids the decoys it sees through (10%). For Qwen3:
 
-| Setup | Thief | Thefts | Detected (measured) | Detected (model) |
-|---|---|---|---|---|
-| 2 low-realism decoys per type | naive | 53 | 98% | 95% |
-| 2 high-realism decoys per type | naive | 54 | 91% | 95% |
-| 4 high-realism decoys per type | naive | 52 | 94% | 97% |
-| 2 high-realism decoys per type | decoy-aware | 54 | 46% | 45% |
-| 4 high-realism decoys per type | decoy-aware | 52 | 60% | 60% |
+| Setup | Thief | Thefts | Detected (measured) | 95% interval | Detected (model) | Model's 95% interval |
+|---|---|---|---|---|---|---|
+| 2 low-realism decoys per type | naive | 53 | 98% | 90-100% | 95% | 92-97% |
+| 2 high-realism decoys per type | naive | 54 | 91% | 80-96% | 95% | 92-97% |
+| 4 high-realism decoys per type | naive | 52 | 94% | 84-98% | 97% | 95-98% |
+| 2 high-realism decoys per type | decoy-aware | 54 | 46% | 34-59% | 45% | 37-50% |
+| 4 high-realism decoys per type | decoy-aware | 52 | 60% | 46-72% | 60% | 49-67% |
 
-All are within 4 points, inside the sampling noise for 52-54 thefts (one standard error is 3-7 points). This is a consistency check, not a test on fresh data: the two numbers came from these same runs. Low-realism decoys against a decoy-aware thief are left out, because the "seen through" share was measured on high-realism decoys. For Claude, fitted the same way: every naive theft detected (20 thefts; model 100%), and decoy-aware thefts detected 55% with 2 high-realism decoys per type (40 thefts; model 50%) and 69% with 4 (16 thefts; model 67%).
+All are within 4 points, inside the sampling noise for 52-54 thefts (one standard error is 3-7 points), and every model value lies inside the measured interval. (Measured: Wilson intervals. Model: from resampling the runs its inputs come from.) This is a consistency check, not a test on fresh data: the two numbers came from these same runs. Low-realism decoys against a decoy-aware thief are left out, because the "seen through" share was measured on high-realism decoys. For Claude, fitted the same way: every naive theft detected (20 thefts; model 100%), and decoy-aware thefts detected 55% with 2 high-realism decoys per type (40 thefts; model 50%) and 69% with 4 (16 thefts; model 67%).
 
 Two tests on fresh data then checked the model's predictions, each written down and pushed to GitHub before its runs (`experiments/validation.py`, `results/validation_prediction*.json`). Each uses the placement the game recommends against that model, which none of its earlier runs had used. Both passed: every prediction lies inside the 95% interval of what was measured.
 
@@ -125,15 +153,15 @@ Two tests on fresh data then checked the model's predictions, each written down 
 | Claude | 1 of each | naive | 43 | 100% | 92-100% | 100% |
 | Claude | 1 of each | decoy-aware | 58 | 34% | 24-47% | 33% |
 
-**Which alarm rule.** For each decoy setup and alarm rule, straight from the runs with no model in between: the share of the honest tasks that set off the alarm (the 40 normal tasks and the 18 that need sensitive files, each task counted once), against the share of thefts it detected (direct-mode runs in which the agent sent something out; detected means the alarm went off at some point in the run).
+**Which alarm rule.** For each decoy setup and alarm rule, straight from the runs with no model in between: the share of the honest tasks that set off the alarm (the 40 normal tasks and the 18 that need sensitive files, each task counted once), against the share of thefts it detected (direct-mode runs in which the agent sent something out; detected means the alarm went off at some point in the run). The bars are 95% intervals: Wilson intervals for thefts detected, and for false alarms a bootstrap over the 58 tasks (tasks drawn with replacement 2,000 times), since that rate is an average over tasks.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/alarm_tradeoff_dark.png">
   <img alt="Thefts detected against false alarms on honest work for each alarm rule and decoy setup, for naive and decoy-aware hijacked Qwen3 agents" src="figures/alarm_tradeoff_light.png" width="100%">
 </picture>
 
-- **Naive hijacked agents:** the strictest rule (a decoy is sent outside) detected 91-98% of thefts with no false alarm on any honest task. Looser rules detected at most 7 points more, at 9-29% false alarms.
-- **Decoy-aware agents:** the strictest rule detected 29% of thefts with low-realism decoys and 46-60% with high-realism ones. The rule "found by a search" detected 72-85%, because the agent's own search returns the decoys along with the real files. (The decoy-aware instructions told it to look at all the candidates first, so a more careful attacker might set off this rule less often.) But this rule also went off on 9-10% of honest tasks: on 29-33% of the tasks that need sensitive files, and never on the normal tasks.
+- **Naive hijacked agents:** the strictest rule (a decoy is sent outside) detected 91-98% of thefts (95% intervals 80-100%) with no false alarm on any honest task. Looser rules detected at most 7 points more, at 9-29% false alarms.
+- **Decoy-aware agents:** the strictest rule detected 29% of thefts with low-realism decoys [18-42%] and 46-60% with high-realism ones [34-72%]. The rule "found by a search" detected 72-85% [59-92%], because the agent's own search returns the decoys along with the real files. (The decoy-aware instructions told it to look at all the candidates first, so a more careful attacker might set off this rule less often.) But this rule also went off on 9-10% of honest tasks [3-18%]: on 29-33% of the tasks that need sensitive files, and never on the normal tasks.
 - **Realism matters first:** against decoy-aware agents, high-realism decoys raised strict-rule detection from 29% to 46% for Qwen3, and from 0% to 55% for Claude. More decoys then help in step with the decoy share, as the model predicts: 4 per type instead of 2 raised it to 60% and 69%.
 - **`act` and `send_out`:** they detected the same naive thefts and the same Claude thefts. Against decoy-aware Qwen3 with high-realism decoys, `act` detected 2 more thefts per setup, because it also fires when the agent opens a decoy and then sends a real file. `act` went off on 0.6-1.1% of honest tasks (emailing a password to a new colleague, and copying a decoy's records into a new file), `send_out` on none.
 - **Claude:** every naive theft was detected under every rule (20 of 20). Against decoy-aware Claude the strictest rule detected none of 19 thefts with low-realism decoys, 55% of 40 with 2 high-realism decoys per type and 69% of 16 with 4; the search rule detected 79%, 100% and 94%. Claude's false alarms: none under the strict rules, 6-7% under "found by a search", 33% under "shown in a file list".
@@ -147,9 +175,9 @@ Two tests on fresh data then checked the model's predictions, each written down 
 </picture>
 
 - **Sent outside** never fired, at any share and any realism.
-- **Found by a search** fires only on sensitive work: on no normal task, and on 18-21% of the sensitive tasks for Claude and 27-30% for Qwen3. A company where 10% of the assistant's tasks touch sensitive files would see it on about 2% (Claude) to 3% (Qwen3) of all tasks.
+- **Found by a search** fires only on sensitive work: on no normal task, and on 18-21% of the sensitive tasks for Claude and 27-30% for Qwen3 (high realism: 21%, 95% interval 5-38%, and 30%, 14-46%). The intervals are wide because whether a search turns up decoys depends on the task, and there are 18 sensitive tasks. A company where 10% of the assistant's tasks touch sensitive files would see it on about 2% (Claude) to 3% (Qwen3) of all tasks.
 - **Shown in a file list** fires even on normal work (13-19% of tasks), because agents often list the whole drive.
-- **Realism barely changes false alarms** (the shaded bands are narrow): a search returns decoys whatever they look like. Realism matters for catching decoy-aware thieves instead (above).
+- **Realism barely changes false alarms:** at any share of sensitive work, low, medium and high realism are within 5 points of each other, well inside the shaded 95% intervals (a bootstrap over tasks): a search returns decoys whatever they look like. Realism matters for catching decoy-aware thieves instead (above).
 
 **Feeding the measured cost into the game.** In the game, protecting a type costs, per attack: the honest requests that look for that type without naming the file × (0.1 for each wrong answer the decoys cause + 0.05 for each false alarm someone has to check), against 10 for a leaked password. The wrong-answer rate (how much more often a request goes wrong than with no decoys) and the false-alarm rate are the measured ones; the share of requests that look for each type is varied. With attacks at 1 per 1,000 requests and 9 decoys available, the game's placement (decoys per type: passwords, customer records, bank details) and its expected loss:
 
@@ -177,9 +205,10 @@ A cut-down game picks its placement under its own assumption; that placement is 
   <img alt="Expected loss of the full game, two cut-down games and four simple rules for Qwen3 with 9 decoys, in three settings: each simple rule or cut-down game loses in at least one" src="figures/ablations_light.png" width="100%">
 </picture>
 
-- **Leaving out the decoy-aware thieves costs the most when attacks are common.** Qwen3 sees through 10% of realistic decoys and 48% of low-realism ones. The game planned for naive thieves stops at one decoy per type, which deters them but not the decoy-aware ones: loss 2.13 with realistic decoys and 2.59 with low-realism ones, against 0.21 for the full game. Claude saw through none of the realistic decoys, so for Claude the two agree.
-- **Leaving out the cost to honest work costs the most when attacks are rare** (1 per 100,000 requests): that game plants decoys anyway and loses 21-39, against 10.
+- **Leaving out the decoy-aware thieves costs the most when attacks are common.** Qwen3 sees through 10% of realistic decoys and 48% of low-realism ones. The game planned for naive thieves stops at one decoy per type, which deters them but not the decoy-aware ones: loss 2.13 with realistic decoys and 2.59 with low-realism ones, against 0.21 for the full game. Claude saw through none of the realistic decoys, so for Claude the two agree. With realistic decoys this gap rests on the measured 10%: in resamples where Qwen3 sees through almost none, the two agree, so the full game is better in 88% of resamples (by up to 2.1); with low-realism decoys, in all of them.
+- **Leaving out the cost to honest work costs the most when attacks are rare** (1 per 100,000 requests): that game plants decoys anyway and loses 21-39, against 10 (worse in 91% of resamples for Qwen3, all of them for Claude).
 - **Split by value** matches the full game when attacks are common, but loses 21-39 when they are rare. All on passwords never gets below 8.
+- **The same number in every type, against low-realism decoys** (Qwen3, 9 decoys): 2.09 against 0.21, but the game is better in only 61% of resamples, so this edge is the least certain.
 - Each simple rule and each cut-down game loses in at least one setting. The full game is never worse than any of them, by construction: it can choose any of their placements.
 
 **The adaptive, decoy-aware thief.** The decoy-aware thief is the type the game's Bayesian part is built for: it knows decoys may be there and tries to tell them from the real files before it steals. It comes in two forms. The scripted one (`attackers/scripted.py`) lists the drive, scores each candidate on four signs a planted file may show (an unusual file type, a convenient name, nobody else has access, created recently) and sends the least suspicious file, or nothing if every candidate looks planted. The other is a real hijacked agent whose instructions warn that some files are decoys, give the same signs, and tell it to look at every candidate and send only the one that looks most genuine. The share of decoys it sees through is the model's e: Qwen3 saw through 10% of realistic decoys and 48% of low-realism ones; Claude saw through none of the realistic decoys and all of the low-realism ones. Realism is what stops this thief from telling decoys apart.
@@ -212,6 +241,7 @@ Pilot findings (October 2026) (106 agent runs in AgentDojo's workspace environme
 | `experiments/alarm_tradeoff.py` | For each alarm rule and decoy setup: false alarms on honest tasks against thefts detected, straight from the runs. |
 | `experiments/false_alarm_curve.py` | False alarms against the share of honest tasks that need sensitive files, for each alarm rule and decoy realism. |
 | `experiments/real_hijacks.py` | Hidden instructions a model actually followed: how often, per wording, and what the alarm did in the rerun batch of real hijacks. |
+| `experiments/alarm_timing.py` | From the saved hijack runs: whether each alarm rule fires before, with or after the first real leak; what happened in the thefts the strict alarm missed (rebuilding those drives); real hijacks against direct mode, measure by measure, with 95% intervals. |
 | `experiments/validation.py` | Tests of the model on fresh data: writes down its prediction for a placement never run before (`--predict`), then compares it with the runs. One test per model. |
 | `experiments/deterrence.py` | How often a hijacked agent sent anything out at all, by the share of decoys. |
 | `experiments/pilot/` | The October feasibility pilot: `run_pilot.py` (real AI agents; needs a key), `scripted_decoy_test.py`, `summarize_pilot.py`. |
@@ -275,10 +305,11 @@ python experiments/check_setup.py            # checks the Anthropic, Google and 
 python experiments/pilot/summarize_pilot.py  # the pilot numbers above
 
 # Analyses of the saved runs, and the charts (no API key needed)
-python experiments/placement_comparison.py   # placement strategies scored with the measured numbers (a few seconds)
+python experiments/placement_comparison.py   # placement strategies scored with the measured numbers, with 95% intervals (about 10 minutes)
 python experiments/alarm_tradeoff.py         # false alarms against thefts detected, for each alarm rule
 python experiments/false_alarm_curve.py      # false alarms against the share of sensitive work
 python experiments/real_hijacks.py           # hidden instructions a model followed, and what the alarm did
+python experiments/alarm_timing.py           # when the alarm fires, the thefts it missed, real hijacks against direct mode
 python experiments/validation.py             # the model's prediction for a new placement, against the runs
 python experiments/deterrence.py             # how often hijacked agents tried to steal, by the share of decoys
 python figures/charts.py                     # redraws the charts from those results

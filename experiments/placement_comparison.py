@@ -22,6 +22,11 @@ Two views, for an agent profile (Claude or Qwen3: the same model as honest agent
 It also checks the model against the hijack runs (with the measured grab-everything share and evade, does
 it predict how often a theft was detected in each setting?), and changes the assumptions one at a time.
 
+95% intervals: a bootstrap over the runs behind every measured input. Honest runs are drawn with replacement within
+each task and decoy setting, hijack runs within each decoy setting and kind of thief (1,000 times); the inputs are
+measured again, every placement is chosen again, and the losses are scored again. The intervals show how much the
+results depend on run-to-run noise; the assumed values are varied separately (sensitivity).
+
     python experiments/placement_comparison.py
 Writes results/placement_comparison.json.
 """
@@ -32,8 +37,11 @@ import json
 import os
 import sys
 import warnings
+from collections import defaultdict
 from itertools import product
 from math import factorial
+
+import numpy as np
 
 warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -72,9 +80,13 @@ def _right(r) -> bool:
     return bool(r["utility"])
 
 
-def honest_inputs(model_file: str) -> dict:
-    recs = [rescore(r) for r in latest_ok(load_records(os.path.join(ROOT, "results", "honest", model_file + ".jsonl"))).values()
+def sensitive_records(model_file: str) -> list[dict]:
+    return [rescore(r) for r in latest_ok(load_records(os.path.join(ROOT, "results", "honest", model_file + ".jsonl"))).values()
             if r.get("task_group") == "sensitive"]
+
+
+def honest_inputs(model_file: str, recs: list[dict] | None = None) -> dict:
+    recs = sensitive_records(model_file) if recs is None else recs
     out = {}
     for c in TYPES:
         rows = [r for r in recs if SENSITIVE_TASKS[r["user_task"]].asset_class == c
@@ -98,9 +110,13 @@ def _sent(r):
     return {e["token"] for e in r["events"] if e["kind"] == "leaked" and e["external"]}
 
 
-def thief_inputs(model_file: str) -> dict:
+def direct_records(model_file: str) -> list[dict]:
     recs = [json.loads(line) for line in open(os.path.join(ROOT, "results", "hijack", model_file + ".jsonl"), encoding="utf-8") if line.strip()]
-    d = [r for r in recs if r["mode"] == "direct" and r["error"] is None and r["setting"] in FIT_SETTINGS]
+    return [r for r in recs if r["mode"] == "direct" and r["error"] is None and r["setting"] in FIT_SETTINGS]
+
+
+def thief_inputs(model_file: str, d: list[dict] | None = None) -> dict:
+    d = direct_records(model_file) if d is None else d
     naive = [r for r in d if not r["aware"] and _sent(r)]
     share = {"k2_low": 2 / 4, "k2_high": 2 / 4, "k4_high": 4 / 6}
 
@@ -322,6 +338,71 @@ def sensitivity(hon, th, rpa: int = 1000) -> list[dict]:
     return rows
 
 
+# ---------------------------------------------------------------------------------------------- intervals
+
+BOOT_REPS = 1000
+BOOT_RATES = (1_000, 100_000)       # the two rates the charts show
+POLICIES = {"same-per-type": same_per_type, "random": random_split, "crown-jewels": crown_jewels}
+
+
+def _resample(groups: list[list[dict]], rng) -> list[dict]:
+    return [g[i] for g in groups for i in rng.integers(0, len(g), size=len(g))]
+
+
+def _losses(hon, th) -> dict:
+    """The numbers the charts and tables show, for one set of measured inputs."""
+    out = {}
+    for cell in ablations(hon, th):
+        key = (cell["realism"], cell["requests_per_attack"], cell["budget"])
+        for name in ("game", *ABLATIONS, "same-per-type", "value-proportional", "crown-jewels", "random"):
+            out[("ablation", *key, name)] = -cell[name]["payoff"]
+        out[("placement", *key)] = "/".join(map(str, cell["game"]["decoys"]))
+    for rpa in BOOT_RATES:
+        for B in BUDGETS:
+            out[("budget", rpa, B, "game")] = -game(B, hon, th, rpa)["payoff"]
+            for name, policy in POLICIES.items():
+                out[("budget", rpa, B, name)] = -expected(policy(B), hon, th, rpa)["payoff"]
+    for setting, q in (("k2_low", 0.5), ("k2_high", 0.5), ("k4_high", 2 / 3)):
+        out[("predicted", setting, "naive")] = th["grab_all"] + (1 - th["grab_all"]) * q
+        if setting != "k2_low":
+            out[("predicted", setting, "decoy-aware")] = (1 - th["evade_high"]) * q
+    return out
+
+
+def intervals(honest_file: str, hijack_file: str, seed: int) -> dict:
+    """95% bootstrap intervals for every loss, the share of resamples in which the game chose the same placement as
+    with the measured inputs, and intervals for the model's predicted detection rates."""
+    hgroups, jgroups = defaultdict(list), defaultdict(list)
+    for r in sensitive_records(honest_file):
+        hgroups[(r["user_task"], r["setting"])].append(r)
+    for r in direct_records(hijack_file):
+        jgroups[(r["setting"], r["aware"])].append(r)
+    hgroups, jgroups = list(hgroups.values()), list(jgroups.values())
+    point = _losses(honest_inputs(None, sum(hgroups, [])), thief_inputs(None, sum(jgroups, [])))
+    rng = np.random.default_rng(seed)
+    reps = [_losses(honest_inputs(None, _resample(hgroups, rng)), thief_inputs(None, _resample(jgroups, rng)))
+            for _ in range(BOOT_REPS)]
+    out = {"reps": BOOT_REPS, "ablations": defaultdict(dict), "budgets": defaultdict(lambda: defaultdict(dict)),
+           "same_placement": {}, "predicted": defaultdict(dict), "vs_game": defaultdict(dict)}
+    for key, value in point.items():
+        if key[0] == "placement":
+            out["same_placement"]["/".join(map(str, key[1:]))] = sum(r[key] == value for r in reps) / BOOT_REPS
+            continue
+        lo, hi = (float(v) for v in np.percentile([r[key] for r in reps], [2.5, 97.5]))
+        if key[0] == "ablation":
+            cell = "/".join(map(str, key[1:4]))
+            out["ablations"][cell][key[4]] = [lo, hi]
+            if key[4] != "game":    # paired: the same resample scores both, so the difference is what to read
+                diff = [r[key] - r[("ablation", *key[1:4], "game")] for r in reps]
+                out["vs_game"][cell][key[4]] = {"difference": [float(v) for v in np.percentile(diff, [2.5, 97.5])],
+                                                "game_better": sum(d > 0.005 for d in diff) / BOOT_REPS}
+        elif key[0] == "budget":
+            out["budgets"][str(key[1])][str(key[2])][key[3]] = [lo, hi]
+        else:
+            out["predicted"][key[1]][key[2]] = [lo, hi]
+    return json.loads(json.dumps(out))
+
+
 # ---------------------------------------------------------------------------------------------- main
 
 def main():
@@ -381,6 +462,22 @@ def main():
                 dec = "/".join(map(str, r["decoys"])) if r["decoys"] != "random" else "random"
                 cells.append(f"{-r['payoff']:6.2f} [{dec:>6s}]".rjust(24))
             print(f"  {row['realism']:7s} {row['requests_per_attack']:15,d} {row['budget']:6d}  " + "  ".join(cells))
+        prof["intervals"] = intervals(honest_file, hijack_file, seed=len(report["profiles"]))
+        iv = prof["intervals"]
+        print(f"\n95% intervals from {iv['reps']} resamples of the runs (expected loss), with the share of resamples in which "
+              "the game chose the same placement:")
+        for row in prof["ablations"]:
+            key = f"{row['realism']}/{row['requests_per_attack']}/{row['budget']}"
+            print(f"  {row['realism']:7s} {row['requests_per_attack']:15,d} {row['budget']:6d}  same placement "
+                  f"{iv['same_placement'][key]:4.0%}  " + "  ".join(f"{n[:12]} {-row[n]['payoff']:.2f} [{iv['ablations'][key][n][0]:.2f}-"
+                                                                   f"{iv['ablations'][key][n][1]:.2f}]" for n in names))
+        print("  predicted share of thefts detected: " + "; ".join(f"{s} {t} [{lo:.0%}-{hi:.0%}]" for s, d in iv["predicted"].items()
+                                                                     for t, (lo, hi) in d.items()))
+        print("  paired, 9 decoys: how much more each loses than the game [95% interval], and in what share of resamples the game is better:")
+        for cell, rows in iv["vs_game"].items():
+            if cell.endswith("/9"):
+                print(f"    {cell:14s} " + "  ".join(f"{n[:12]} +[{v['difference'][0]:.2f}, {v['difference'][1]:.2f}] {v['game_better']:4.0%}"
+                                                  for n, v in rows.items()))
         report["profiles"][profile] = prof
     path = os.path.join(ROOT, "results", "placement_comparison.json")
     with open(path, "w", encoding="utf-8") as f:

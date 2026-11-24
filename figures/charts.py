@@ -12,7 +12,8 @@ Reads the results files and writes into figures/:
   ablations_{light,dark}.png         expected loss of the full game, the game with one part removed, and simple
                                      rules, in three situations (from results/placement_comparison.json)
   false_alarms_{light,dark}.png      false alarms against the share of honest work that touches sensitive files,
-                                     by alarm rule and decoy realism (from results/false_alarm_curve.json)
+                                     by alarm rule (from results/false_alarm_curve.json)
+Every chart shows 95% intervals: Wilson intervals for shares of runs, bootstraps over tasks or runs elsewhere.
 """
 from __future__ import annotations
 
@@ -84,15 +85,21 @@ def loss_chart(data, theme):
     t = THEMES[theme]
     fig, axes = plt.subplots(2, 2, figsize=(9, 6.4), facecolor=t["surface"], sharex=True)
     title(fig, t, "Expected loss for each way of placing decoys",
-          "Thieves know the strategy and pick their target or stay away. Lower is better; a password leak costs 10.")
-    legend(fig, t, 0.86, [(i, m, label) for i, (_, label, m) in enumerate(POLICIES)])
+          "Thieves know the strategy and pick their target or stay away. Lower is better; a password leak costs 10.\n"
+          "Bars: 95% intervals at 3, 6 and 9 decoys, from resampling the runs behind the measured inputs.")
+    legend(fig, t, 0.84, [(i, m, label) for i, (_, label, m) in enumerate(POLICIES)])
     for row, profile in enumerate(("Claude", "Qwen3")):
         for col, (rpa, when) in enumerate((("1000", "attacks common (1 per 1,000 honest requests)"),
                                           ("100000", "attacks rare (1 per 100,000 honest requests)"))):
             ax = axes[row][col]
             style(ax, t)
             budgets = data["profiles"][profile]["budgets"][rpa]
+            bars = data["profiles"][profile]["intervals"]["budgets"][rpa]
             for i, (key, _, marker) in reversed(list(enumerate(POLICIES))):     # game drawn last, on top
+                for b in (3, 6, 9):     # a few bars, nudged apart, keep the lines readable
+                    lo, hi = bars[str(b)][key]
+                    x = b + (i - 1.5) * 0.12
+                    ax.plot([x, x], [lo, hi], color=t["series"][i], linewidth=1.3, alpha=0.6, solid_capstyle="round", zorder=2)
                 line(ax, t, BUDGETS, [-budgets[str(b)][key]["payoff"] for b in BUDGETS], i, marker, z=3 + (i == 0))
             ax.set_ylim(bottom=0)
             same = all(abs(budgets[str(b)]["game"]["payoff"] - budgets[str(b)]["same-per-type"]["payoff"]) < 1e-9 for b in BUDGETS)
@@ -105,7 +112,7 @@ def loss_chart(data, theme):
                 ax.set_xlabel("decoys available", fontsize=8.5, color=t["ink2"])
             if col == 0:
                 ax.set_ylabel("expected loss", fontsize=8.5, color=t["ink2"])
-    fig.subplots_adjust(left=0.08, right=0.98, top=0.78, bottom=0.09, hspace=0.38, wspace=0.16)
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.76, bottom=0.09, hspace=0.38, wspace=0.16)
     return fig
 
 
@@ -114,9 +121,9 @@ def loss_chart(data, theme):
 SETUPS = [("k2_low", "2 low-realism decoys per type", "o"), ("k2_high", "2 high-realism decoys per type", "s"),
           ("k4_high", "4 high-realism decoys per type", "^")]
 STRICT_TO_LOOSE = ["send_out", "leak_or_use", "act", "access", "any_sighting"]
-RULE_GROUPS = [(("send_out", "leak_or_use", "act"), "opened, used or\nsent outside", "left"),
-               (("access",), "found by\na search", "left"),
-               (("any_sighting",), "shown in a\nfile list", "center")]
+RULE_GROUPS = [(("send_out", "leak_or_use", "act"), "opened, used or\nsent outside", "left", 3),
+               (("access",), "found by\na search", "left", 19),      # raised, clear of the label on its left
+               (("any_sighting",), "shown in a\nfile list", "center", 3)]
 
 
 def alarm_chart(data, theme, profile="Qwen3"):
@@ -126,31 +133,40 @@ def alarm_chart(data, theme, profile="Qwen3"):
     title(fig, t, "Thefts detected against false alarms on honest work, for each alarm rule",
           "Qwen3 8B, measured. Points are alarm rules, named below by what a decoy must go through to set them off;\n"
           "stricter rules sit further left, and rules with equal results share a point. False alarms: share of "
-          f"{cells[SETUPS[0][0]]['honest_tasks']} honest tasks.")
-    legend(fig, t, 0.80, [(i, m, label) for i, (_, label, m) in enumerate(SETUPS)])
+          f"{cells[SETUPS[0][0]]['honest_tasks']} honest tasks.\n"
+          "Bars: 95% intervals (thefts: Wilson; false alarms: resampling tasks). Setups are nudged apart by 0.4 points.")
+    legend(fig, t, 0.77, [(i, m, label) for i, (_, label, m) in enumerate(SETUPS)])
     for ax, (thief, name) in zip(axes, (("naive", "Naive hijacked agent"), ("aware", "Decoy-aware hijacked agent"))):
         style(ax, t, xgrid=True)
         thefts = [cells[s][thief]["thefts"] for s, _, _ in SETUPS]
         for i, (s, _, marker) in reversed(list(enumerate(SETUPS))):
-            xs = [100 * cells[s]["false_alarms"][r] for r in STRICT_TO_LOOSE]
+            nudge = (i - 1) * 0.4
+            xs = [100 * cells[s]["false_alarms"][r] + nudge for r in STRICT_TO_LOOSE]
             ys = [100 * cells[s][thief]["detected"][r] for r in STRICT_TO_LOOSE]
+            for x, y, r in zip(xs, ys, STRICT_TO_LOOSE):
+                dlo, dhi = cells[s][thief]["detected_interval"][r]
+                flo, fhi = cells[s]["false_alarms_interval"][r]
+                ax.plot([x, x], [100 * dlo, 100 * dhi], color=t["series"][i], linewidth=1.1, alpha=0.5, zorder=2,
+                        solid_capstyle="round")
+                ax.plot([100 * flo + nudge, 100 * fhi + nudge], [y, y], color=t["series"][i], linewidth=1.1, alpha=0.5,
+                        zorder=2, solid_capstyle="round")
             line(ax, t, xs, ys, i, marker, z=3 + (i == 0))
-        for rules, label, align in RULE_GROUPS:     # name each group of rules under its points
+        for rules, label, align, y in RULE_GROUPS:     # name each group of rules under its points
             xs = [100 * cells[s]["false_alarms"][r] for s, _, _ in SETUPS for r in rules]
             lo, hi = min(xs), max(xs)
-            ax.plot([lo, hi], [3, 3], color=t["muted"], linewidth=1.2, solid_capstyle="round", zorder=2)
-            ax.text(lo - 0.4 if align == "left" else (lo + hi) / 2, 6, label, ha=align, va="bottom", fontsize=8,
+            ax.plot([lo, hi], [y, y], color=t["muted"], linewidth=1.2, solid_capstyle="round", zorder=2)
+            ax.text(lo - 0.4 if align == "left" else (lo + hi) / 2, y + 3, label, ha=align, va="bottom", fontsize=8,
                     color=t["ink2"], linespacing=1.3)
         ax.set_title(f"{name} ({min(thefts)}-{max(thefts)} thefts per setup)", loc="left", fontsize=9, color=t["ink"], pad=6)
-        top = max(100 * cells[s]["false_alarms"][r] for s, _, _ in SETUPS for r in STRICT_TO_LOOSE)
-        ax.set_xlim(-1.5, 5 * (top // 5) + 6.5)     # room for the loosest rule's points and label
+        top = max(100 * cells[s]["false_alarms_interval"][r][1] for s, _, _ in SETUPS for r in STRICT_TO_LOOSE)
+        ax.set_xlim(-1.5, 5 * (top // 5) + 6.5)     # room for the loosest rule's points, intervals and label
         ax.set_ylim(0, 103)
         percent_axis(ax.xaxis, range(0, int(5 * (top // 5)) + 6, 5))
         percent_axis(ax.yaxis, range(0, 101, 20))
         ax.set_xlabel("honest tasks that set off the alarm", fontsize=8.5, color=t["ink2"])
     axes[0].set_ylabel("thefts detected", fontsize=8.5, color=t["ink2"])
     axes[1].tick_params(labelleft=False)
-    fig.subplots_adjust(left=0.08, right=0.98, top=0.70, bottom=0.11, wspace=0.08)
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.66, bottom=0.11, wspace=0.08)
     return fig
 
 
@@ -209,23 +225,29 @@ def ablation_chart(data, theme, profile="Qwen3", budget=9):
     fig, axes = plt.subplots(1, 3, figsize=(9, 4.9), facecolor=t["surface"], sharey=True)
     title(fig, t, "Which parts of the game matter, and when",
           f"{profile}, {budget} decoys available; expected loss, lower is better. A game with one part removed chooses its\n"
-          "placement without that part, then is scored with the full model.")
+          "placement without that part, then is scored with the full model. Lines: 95% intervals from resampling the runs.")
     handles = [Line2D([0], [0], color=c, linewidth=6) for c in colors]
     fig.legend(handles, ["Full game model", "Game with one part removed", "Simple rule"], loc="upper left",
                bbox_to_anchor=(0.055, 0.80), ncol=3, frameon=False, fontsize=8.5, labelcolor=t["ink2"], handlelength=1.2,
                columnspacing=1.6)
     rows = data["profiles"][profile]["ablations"]
+    iv = data["profiles"][profile]["intervals"]["ablations"]
     ys = list(range(len(ABLATION_ROWS)))[::-1]
     for ax, (realism, rpa, name) in zip(axes, ABLATION_PANELS):
         style(ax, t)
         ax.grid(False)
         ax.grid(axis="x", color=t["grid"], linewidth=0.6)
         cell = next(r for r in rows if r["realism"] == realism and r["requests_per_attack"] == rpa and r["budget"] == budget)
+        bounds = iv[f"{realism}/{rpa}/{budget}"]
         losses = [-cell[key]["payoff"] for key, _, _ in ABLATION_ROWS]
-        top = max(losses) * 1.32
+        top = max(max(losses), max(bounds[key][1] for key, _, _ in ABLATION_ROWS)) * 1.32
         for y, loss, (key, _, kind) in zip(ys, losses, ABLATION_ROWS):
+            lo, hi = bounds[key]
             ax.barh(y, loss, height=0.62, color=colors[kind], zorder=3)
-            ax.text(loss + top * 0.015, y, f"{loss:.2f}", va="center", ha="left", fontsize=8, color=t["ink"])
+            ax.plot([lo, hi], [y, y], color=t["ink"], linewidth=1.1, solid_capstyle="butt", zorder=4)
+            for x in (lo, hi):
+                ax.plot([x, x], [y - 0.13, y + 0.13], color=t["ink"], linewidth=1.1, zorder=4)
+            ax.text(max(loss, hi) + top * 0.015, y, f"{loss:.2f}", va="center", ha="left", fontsize=8, color=t["ink"])
         ax.set_xlim(0, top)
         ax.set_title(name, loc="left", fontsize=9, color=t["ink"], pad=6)
         ax.set_xlabel("expected loss", fontsize=8.5, color=t["ink2"])
@@ -246,9 +268,11 @@ def false_alarm_chart(data, theme):
     t = THEMES[theme]
     fig, axes = plt.subplots(1, 2, figsize=(9, 4.9), facecolor=t["surface"], sharey=True)
     title(fig, t, "False alarms grow with the share of honest work that touches sensitive files",
-          "Mixed from the rates measured on normal and on sensitive tasks. Lines: high-realism decoys; shaded: the range\n"
-          "from low to high realism. Each line is one alarm rule, named by what a decoy must go through to set it off.")
+          "Mixed from the rates measured on normal and on sensitive tasks, with high-realism decoys. Shaded: 95% intervals\n"
+          "from resampling tasks. Each line is one alarm rule, named by what a decoy must go through to set it off.")
     fs = [i / 100 for i in range(101)]
+    peak = max(100 * v for m in data["models"].values() for rule, _, _ in FA_RULES for v in m["high"]["rules"][rule]["band"]["hi"])
+    ytop = 10 * int(peak // 10 + 1)          # the y axis covers every band
     for ax, model in zip(axes, ("Claude", "Qwen3")):
         style(ax, t, xgrid=True)
         cells = data["models"][model]
@@ -256,29 +280,28 @@ def false_alarm_chart(data, theme):
             def curve(cell):
                 r = cell["rules"][rule]
                 return [100 * ((1 - f) * r["normal"] + f * r["sensitive"]) for f in fs]
-            curves = [curve(c) for c in cells.values()]
-            lo = [min(v) for v in zip(*curves)]
-            hi = [max(v) for v in zip(*curves)]
-            ax.fill_between([100 * f for f in fs], lo, hi, color=t["series"][i], alpha=0.18, linewidth=0, zorder=2)
+            band = cells["high"]["rules"][rule]["band"]
+            ax.fill_between([100 * f for f in fs], [100 * v for v in band["lo"]], [100 * v for v in band["hi"]],
+                            color=t["series"][i], alpha=0.16, linewidth=0, zorder=2)
             ys = curve(cells["high"])
             ax.plot([100 * f for f in fs], ys, color=t["series"][i], linewidth=2, zorder=3, solid_capstyle="round")
             # rising lines: label above-left or below-right of a point, where the line cannot run into it
             if rule == "send_out":
                 ax.text(98, ys[-1] + 2.2, label + ": never fired", va="bottom", ha="right", fontsize=8, color=t["ink2"])
-            elif rule == "access":
-                ax.text(54, ys[54] - 2.5, label, va="top", ha="left", fontsize=8, color=t["ink2"])
+            elif rule == "access":     # above-left, clear of the "never fired" label at the bottom
+                ax.text(62, ys[62] + 2.5, label, va="bottom", ha="right", fontsize=8, color=t["ink2"])
             else:
                 ax.text(62, ys[62] + 2.5, label, va="bottom", ha="right", fontsize=8, color=t["ink2"])
         n = data["task_set"][model]           # the tasks behind the alarm chart: where its false alarms sit on this one
         mix = 100 * n["sensitive"] / (n["sensitive"] + n["standard"])
         ax.axvline(mix, color=t["muted"], linewidth=1, linestyle=(0, (2, 2)), zorder=1)
-        ax.text(mix + 1.5, 57, f"all our tasks\n({n['sensitive']} of {n['sensitive'] + n['standard']})", fontsize=7.5,
+        ax.text(mix + 1.5, ytop - 3, f"all our tasks\n({n['sensitive']} of {n['sensitive'] + n['standard']})", fontsize=7.5,
                 color=t["muted"], va="top")
         ax.set_title(f"{model}: honest agent", loc="left", fontsize=9, color=t["ink"], pad=6)
         ax.set_xlim(0, 100)
-        ax.set_ylim(-1, 64)
+        ax.set_ylim(-1, ytop + 4)
         percent_axis(ax.xaxis, range(0, 101, 25))
-        percent_axis(ax.yaxis, range(0, 61, 10))
+        percent_axis(ax.yaxis, range(0, ytop + 1, 10))
         ax.set_xlabel("share of honest tasks that need sensitive files", fontsize=8.5, color=t["ink2"])
     axes[0].set_ylabel("honest tasks that set off the alarm", fontsize=8.5, color=t["ink2"])
     axes[1].tick_params(labelleft=False)
